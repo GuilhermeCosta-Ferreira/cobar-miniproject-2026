@@ -3,6 +3,8 @@ from miniproject.simulation import MiniprojectSimulation
 
 # our imports
 from .odor_tracking import odor_intensity_to_control_signal
+from flygym.examples.locomotion.turning_controller import TurningController
+from .rough_terrain import damp_drives_for_rough_terrain
 
 class Controller:
     def __init__(self, sim: MiniprojectSimulation):
@@ -11,7 +13,7 @@ class Controller:
 
         # our inits
         self.olfaction_smooth = None
-        self.alpha = 0.001
+        self.alpha = 0.05
 
 
     def step(self, sim: MiniprojectSimulation):
@@ -23,7 +25,8 @@ class Controller:
         # get control signals from olfaction
         control_signals = self.olfaction_smooth
 
-        drives = odor_intensity_to_control_signal(control_signals)
+        odor_drives = odor_intensity_to_control_signal(control_signals, attractive_gain=-800)
+        drives = damp_drives_for_rough_terrain(odor_drives)
         joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
 
