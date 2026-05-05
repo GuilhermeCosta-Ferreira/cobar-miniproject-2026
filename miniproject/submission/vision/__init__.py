@@ -1,5 +1,5 @@
-from .visualize import produce_fly_view
+from .visualize import produce_human_view
 
 __all__ = [
-    "produce_fly_view"
+    "produce_human_view",
 ]
