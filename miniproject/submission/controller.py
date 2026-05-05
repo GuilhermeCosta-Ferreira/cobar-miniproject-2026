@@ -1,11 +1,13 @@
 # ================================================================
 # 0. Section: IMPORTS
 # ================================================================
-from miniproject.simulation import MiniprojectSimulation
+import numpy as np
 
-# our imports
-from .odor_tracking import odor_intensity_to_control_signal
+from miniproject.simulation import MiniprojectSimulation
 from flygym.examples.locomotion.turning_controller import TurningController
+
+from .Olfaction import Olfaction
+from .odor_tracking import odor_intensity_to_control_signal
 from .rough_terrain import damp_drives_for_rough_terrain
 
 
@@ -15,33 +17,20 @@ from .rough_terrain import damp_drives_for_rough_terrain
 # ================================================================
 class Controller:
     def __init__(self, sim: MiniprojectSimulation):
-        # you may also implement your own turning controller
         self.turning_controller = TurningController(sim.timestep)
-
-        # our inits
-        self.olfaction_smooth = None
-        self.alpha = 0.05
-
+        self.olfaction = Olfaction()
 
     def step(self, sim: MiniprojectSimulation):
-        # implement your control algorithm here
+        # OLFACTION
         olfaction = sim.get_olfaction(sim.fly.name)
-        # smooth signal
-        self.process_olfaction(olfaction)
+        smooth_olfaction = self.olfaction.process_olfaction(olfaction)
 
-        # get control signals from olfaction
-        control_signals = self.olfaction_smooth
+        # WIND
+        wind = sim.get_antenna_data(sim.fly.name)
+
+        control_signals = smooth_olfaction
 
         odor_drives = odor_intensity_to_control_signal(control_signals, attractive_gain=-800)
         drives = damp_drives_for_rough_terrain(odor_drives)
         joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
-
-    def process_olfaction(self, signal):
-        if self.olfaction_smooth is None:
-            self.olfaction_smooth = signal
-        else:
-            self.olfaction_smooth = (
-                (1 - self.alpha) * self.olfaction_smooth + self.alpha * signal
-            )
-        return self.olfaction_smooth
