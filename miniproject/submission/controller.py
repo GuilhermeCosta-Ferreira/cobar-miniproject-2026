@@ -1,4 +1,6 @@
-import numpy as np
+# ================================================================
+# 0. Section: IMPORTS
+# ================================================================
 from miniproject.simulation import MiniprojectSimulation
 
 # our imports
@@ -6,6 +8,11 @@ from .odor_tracking import odor_intensity_to_control_signal
 from flygym.examples.locomotion.turning_controller import TurningController
 from .rough_terrain import damp_drives_for_rough_terrain
 
+
+
+# ================================================================
+# 1. Section: Controler Class
+# ================================================================
 class Controller:
     def __init__(self, sim: MiniprojectSimulation):
         # you may also implement your own turning controller

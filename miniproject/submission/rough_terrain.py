@@ -1,15 +1,20 @@
-# rough_terrain.py
-
+# ================================================================
+# 0. Section: IMPORTS
+# ================================================================
 import numpy as np
 
 
+
+# ================================================================
+# 1. Section: Functions
+# ================================================================
 def damp_drives_for_rough_terrain(
-    drives,
-    speed_scale=0.75,
-    turn_scale=0.55,
-    min_drive=0.5,
-    max_drive=1.0,
-):
+    drives: list | np.ndarray,
+    speed_scale: float = 0.75,
+    turn_scale: float = 0.55,
+    min_drive: float = 0.5,
+    max_drive: float = 1.0,
+) -> np.ndarray:
     """
     reduces:
     - forward speed

@@ -1,9 +1,17 @@
+# ================================================================
+# 0. Section: IMPORTS
+# ================================================================
 import numpy as np
 
+
+
+# ================================================================
+# 1. Section: Functions
+# ================================================================
 def odor_intensity_to_control_signal(
-    odor_intensities,
-    attractive_gain=-500,
-):
+    odor_intensities: np.ndarray,
+    attractive_gain: int = -500,
+) -> np.ndarray:
     """Convert odor sensor readings to a turning control signal.
 
     Parameters
