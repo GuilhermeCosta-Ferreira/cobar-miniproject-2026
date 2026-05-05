@@ -2,6 +2,7 @@
 # 0. Section: IMPORTS
 # ================================================================
 import numpy as np
+import cv2
 
 from miniproject.simulation import MiniprojectSimulation
 
@@ -20,5 +21,18 @@ def produce_fly_view(sim: MiniprojectSimulation) -> np.ndarray:
         ],
         axis=1,
     )
-
     return im
+
+def produce_raw_vision(sim: MiniprojectSimulation) -> np.ndarray:
+    """Produce the raw camera view at the current step to be ploted"""
+    vision = sim.get_raw_vision(sim.fly.name)
+    return vision
+
+def _overlay_mask(im: np.ndarray, mask: np.ndarray, color: tuple[int, int, int]=(100, 100, 0)) -> np.ndarray:
+    """Overlay mask on the image"""
+    mask_color = np.zeros_like(im)
+    mask_color[mask] = color
+    overlay = cv2.addWeighted(im, 1, mask_color, 0.5, 0)
+    return overlay
+
+    

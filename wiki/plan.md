@@ -22,18 +22,23 @@
 ### Navigating through Obstacles
 [Neural mechanisms to exploit positional geometry for collision avoidance](https://doi.org/10.1016/j.cub.2022.04.023)
 
+```mermaid
+flowchart LR
+    OF[Optic flow] --> L[LPLC1-like detector]
+    OD[Object detection] --> L
+```
+
+
 - obstacle looming (rapid expansion of an object's image on the retina) or risky lateral motion -->slow or stop
 - obstacle stronger on left visual field --> bias right turn, and vice versa
 - if multiple obstacle nearby --> obstacle layer should subsume order following layer temporarily
-
-
 
 ### Navigating through Wind
 
 [A neural circuit for wind-guided olfactory navigation](https://doi.org/10.1038/s41467-022-32247-7)
 
 - odor + wind --> turn to align heading against wind
-- no oder but wind --> crosswind casting (zig-zag behaviour)
+- no odor but wind --> crosswind casting (zig-zag behaviour)
 - reacquired odor --> reduce casting and resume upwind advance
 
 ### Detecting threats (+ avoiding "Moving Obstacle")
