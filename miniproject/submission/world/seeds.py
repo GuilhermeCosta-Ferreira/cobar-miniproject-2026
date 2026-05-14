@@ -6,12 +6,15 @@ import numpy as np
 
 
 # ================================================================
-# 1. Section: Functions
+# 1. Section: Pre-Defined Seeds
 # ================================================================
-def update_olfaction(olfaction: np.ndarray, wind: float) -> np.ndarray:
-    pass
+SEEDS: list[int] = [42]
+
 
 
 # ──────────────────────────────────────────────────────
-# 1.1 Subsection: Helper Functions
+# 1.1 Subsection: Augment seeds
 # ──────────────────────────────────────────────────────
+nr_extra_seeds = 5
+steps = int(np.round((10000-100)/nr_extra_seeds))
+SEEDS = np.concatenate([SEEDS, np.arange(100, 10000, steps)]).tolist()

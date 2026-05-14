@@ -14,6 +14,8 @@ class SimpleController:
     def __init__(self, sim: MiniprojectSimulation):
         self.turning_controller = TurningController(sim.timestep)
 
-    def step(self, drives: np.ndarray) -> tuple:
+    def step(
+        self, sim: MiniprojectSimulation, drives: np.ndarray | list
+    ) -> tuple:
         joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion

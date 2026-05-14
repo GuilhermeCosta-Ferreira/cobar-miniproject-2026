@@ -6,7 +6,7 @@ import numpy as np
 from miniproject.simulation import MiniprojectSimulation
 from flygym.examples.locomotion.turning_controller import TurningController
 
-from .Olfaction import Olfaction
+from .turning_controller import damp_drives_for_rough_terrain
 from .wind import (
     Wind,
     get_wind_velocity,
@@ -14,9 +14,9 @@ from .wind import (
 )
 from .olfactation import (
     average_olfaction_signal,
-    odor_intensity_to_control_signal
+    odor_intensity_to_control_signal,
+    Olfaction
 )
-from .rough_terrain import damp_drives_for_rough_terrain
 
 
 
