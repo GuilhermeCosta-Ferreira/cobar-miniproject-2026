@@ -9,15 +9,16 @@ import numpy as np
 # 1. Section: Functions
 # ================================================================
 def odor_intensity_to_control_signal(
-    odor_intensities: np.ndarray,
+    lateralized_odor: np.ndarray,
     attractive_gain: int = -500,
 ) -> np.ndarray:
     """Convert odor sensor readings to a turning control signal.
+    Assumes there is only one odor
 
     Parameters
     ----------
     odor_intensities : np.ndarray
-        Odor intensities from the four sensors, shape ``(4, n_odor_dims)``.
+        Average odor intensities from the 2x2 sensors, shape ``(2, ,)``.
     attractive_gain : float
         Gain applied to the attractive odor dimension.
 
@@ -26,19 +27,15 @@ def odor_intensity_to_control_signal(
     np.ndarray
         Control signal of shape ``(2,)`` for left and right descending drive.
     """
-    attractive_intensities = np.average(
-        odor_intensities[:, 0].reshape(2, 2), axis=0, weights=[9, 1]
-    )
-
-    attractive_bias = (
+    odor_bias = (
         attractive_gain
-        * (attractive_intensities[0] - attractive_intensities[1])
-        / attractive_intensities.mean()
-        if attractive_intensities.mean() != 0
+        * (lateralized_odor[0] - lateralized_odor[1])
+        / lateralized_odor.mean()
+        if lateralized_odor.mean() != 0
         else 0
     )
 
-    effective_bias = attractive_bias
+    effective_bias = odor_bias
     effective_bias_norm = np.tanh(effective_bias**2) * np.sign(effective_bias)
     assert np.sign(effective_bias_norm) == np.sign(effective_bias)
 
