@@ -8,7 +8,6 @@ import numpy as np
 from pathlib import Path
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -56,7 +55,6 @@ def prepare_image_for_png(img: np.ndarray) -> np.ndarray:
         img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGRA)
 
     return img
-
 
 
 # ================================================================

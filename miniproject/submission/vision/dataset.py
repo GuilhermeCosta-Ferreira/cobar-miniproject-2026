@@ -15,7 +15,6 @@ from .visualize import produce_human_view
 OUT_PATH = Path("submission/datasets")
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -44,10 +43,7 @@ def generate_dataset(
 # 1.1 Subsection: Helper Functions
 # ──────────────────────────────────────────────────────
 def run_sim(
-    dataset: list,
-    seed: int,
-    nr_iterations: int,
-    drivers: list[float] = [1.0, 1.0]
+    dataset: list, seed: int, nr_iterations: int, drivers: list[float] = [1.0, 1.0]
 ) -> list:
     sim = MiniprojectSimulation(level=2, seed=seed)
     controller = SimpleController(sim)
@@ -64,7 +60,6 @@ def run_sim(
             dataset.append(img)
 
     return dataset
-
 
 
 # ================================================================

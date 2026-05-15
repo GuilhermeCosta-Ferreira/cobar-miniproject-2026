@@ -6,7 +6,6 @@ import numpy as np
 from matplotlib.colors import rgb_to_hsv
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================

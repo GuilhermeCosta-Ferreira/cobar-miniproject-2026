@@ -6,7 +6,6 @@ import numpy as np
 from miniproject.simulation import MiniprojectSimulation
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================

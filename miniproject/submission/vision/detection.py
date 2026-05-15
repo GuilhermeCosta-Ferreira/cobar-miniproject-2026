@@ -16,7 +16,6 @@ DATASET_PATH: Path = Path(
 # color(--hsv 120 100% 89.804%)
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -26,15 +25,15 @@ def obstacle_by_hue(
     tolerance_hue: float = 5,
     min_saturation: float = 0.3,
     min_value: float = 0.8,
-    height_threshold: int = 150
+    height_threshold: int = 150,
 ) -> list:
     # 1. Builds a hsv dependent mask (isolate bright leafs)
     mask = get_hsv_mask(
-        image = image,
-        target_hue = target_hue,
-        tolerance_hue = tolerance_hue,
-        min_saturation = min_saturation,
-        min_value = min_value
+        image=image,
+        target_hue=target_hue,
+        tolerance_hue=tolerance_hue,
+        min_saturation=min_saturation,
+        min_value=min_value,
     )
 
     # 2. Extract the tall objects (closer)
@@ -62,7 +61,7 @@ def is_flipped(
     diff = np.minimum(diff, 1.0 - diff)
 
     # Saturation filter avoids meaningless hue values in gray/black/white areas
-    mask = (diff <= tolerance)
+    mask = diff <= tolerance
 
     # If no pixels matched, cannot determine flipped state
     if not np.any(mask):
@@ -73,7 +72,6 @@ def is_flipped(
     image_center_y = image.shape[0] / 2
 
     return mask_center_y < image_center_y
-
 
 
 # ================================================================

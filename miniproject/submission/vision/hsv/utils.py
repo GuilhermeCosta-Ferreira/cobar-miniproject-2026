@@ -4,7 +4,6 @@
 import numpy as np
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -14,6 +13,7 @@ def get_hsv_values(hsv_image: np.ndarray) -> tuple:
     value = hsv_image[..., 2]
 
     return hue, saturation, value
+
 
 def hue_to_degree(hue: float) -> float:
     return hue / 360.0

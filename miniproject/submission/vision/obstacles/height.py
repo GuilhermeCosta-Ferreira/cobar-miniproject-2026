@@ -9,13 +9,10 @@ from scipy.ndimage import find_objects, center_of_mass
 from scipy.ndimage import label as get_labels
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
-def get_obstacles_by_height(
-    mask: np.ndarray, height_threshold: float
-) -> list:
+def get_obstacles_by_height(mask: np.ndarray, height_threshold: float) -> list:
     # 1. get the leafes
     labels, _ = cast(tuple, get_labels(mask))
     objects = find_objects(labels)
