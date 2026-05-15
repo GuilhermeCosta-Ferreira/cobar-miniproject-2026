@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 
 from .unpack import prepare_image_for_png
-from .obstacles import get_obstacles_by_height
+from .obstacles import get_obstacles_by_height, get_signals_from_centroids
 from .hsv import convert_to_hsv, hue_to_degree, get_hsv_values, get_hsv_mask
 
 LEAF_COLOR: str = "#00E500"
@@ -26,7 +26,7 @@ def obstacle_by_hue(
     min_saturation: float = 0.3,
     min_value: float = 0.8,
     height_threshold: int = 150,
-) -> list:
+) -> np.ndarray:
     # 1. Builds a hsv dependent mask (isolate bright leafs)
     mask = get_hsv_mask(
         image=image,
@@ -39,7 +39,13 @@ def obstacle_by_hue(
     # 2. Extract the tall objects (closer)
     obstacle_centroids = get_obstacles_by_height(mask, height_threshold)
 
-    return obstacle_centroids
+    # 3. Get the avoidance signals
+    signals = get_signals_from_centroids(
+        obstacle_centroids,
+        np.asarray(image.shape)
+    )
+
+    return signals
 
 
 # ──────────────────────────────────────────────────────
