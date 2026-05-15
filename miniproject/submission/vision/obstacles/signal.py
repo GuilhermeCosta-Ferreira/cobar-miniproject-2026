@@ -11,13 +11,12 @@ import numpy as np
 def get_signals_from_centroids(
     centroids: list[tuple[float, float]],
     image_shape: tuple[int, int, int] | np.ndarray,
-    base_speed: float = 1.0,
     turn_gain: float = 0.6,
     min_signal: float = 0.4,
     max_signal: float = 1.2,
 ) -> np.ndarray:
     if len(centroids) == 0:
-        return np.array([base_speed, base_speed])
+        return np.array([0.0, 0.0])
 
     image_height, image_width = image_shape[:2]
 
@@ -37,8 +36,8 @@ def get_signals_from_centroids(
     # obstacle right -> offset > 0 -> turn left  -> right_signal > left_signal
     turn = -turn_gain * offset
 
-    left_signal = base_speed + turn
-    right_signal = base_speed - turn
+    left_signal = 0.5 + turn
+    right_signal = 0.5 + turn
 
     return np.clip(
         np.array([left_signal, right_signal]),
