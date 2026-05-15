@@ -25,7 +25,7 @@ def obstacle_by_hue(
     tolerance_hue: float = 5,
     min_saturation: float = 0.3,
     min_value: float = 0.8,
-    height_threshold: int = 150,
+    height_threshold: int = 75,
 ) -> np.ndarray:
     # 1. Builds a hsv dependent mask (isolate bright leafs)
     mask = get_hsv_mask_fast(

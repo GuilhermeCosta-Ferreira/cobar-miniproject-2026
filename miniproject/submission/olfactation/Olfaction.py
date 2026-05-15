@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 class Olfaction:
     olfaction_smooth: np.ndarray = field(default_factory=lambda: np.zeros((4,1)))
     alpha: float = 0.05
+    current_signal: np.ndarray = field(default_factory=lambda: np.zeros(2,))
 
     def process_olfaction(self, signal: np.ndarray) -> np.ndarray:
         """Applies a smoothing, when possible to olfactation"""
