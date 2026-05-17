@@ -32,7 +32,6 @@ from flygym.compose import ActuatorType, BaseWorld, FlatGroundWorld, Fly
 from flygym.compose.pose import KinematicPose
 from flygym.utils.math import Rotation3D
 
-
 # ── Constants ────────────────────────────────────────────────────────────────
 
 LEG_NAMES: list[str] = [f"{side}{pos}" for side in "lr" for pos in "fmh"]

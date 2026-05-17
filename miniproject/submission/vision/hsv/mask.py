@@ -35,13 +35,7 @@ def get_hsv_mask(
     # Saturation filter avoids meaningless hue values in gray/black/white areas
     with timer("3_get_mask", timings):
         mask = get_mask_fast(
-            hue,
-            saturation,
-            value,
-            target,
-            tolerance_hue,
-            min_saturation,
-            min_value
+            hue, saturation, value, target, tolerance_hue, min_saturation, min_value
         )
 
     print_timings(timings)
@@ -79,6 +73,7 @@ def get_mask_fast(
     np.logical_and(mask, tmp, out=mask)
 
     return mask
+
 
 def get_hsv_mask_fast(
     image: np.ndarray,

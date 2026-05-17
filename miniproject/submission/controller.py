@@ -11,17 +11,20 @@ from .turning_controller import damp_drives_for_rough_terrain
 from .wind import (
     Wind,
     get_wind_velocity,
-    update_olfaction
+    update_olfaction,
 )
-from .olfactation import (
+from .olfaction import (
     average_olfaction_signal,
     odor_intensity_to_control_signal,
-    Olfaction
+    Olfaction,
 )
-from .vision import obstacle_by_hue, produce_human_view
+from .vision import (
+    obstacle_by_hue,
+    produce_human_view,
+    visualize,
+    Vision,
+)
 
-
-from .vision import visualize
 
 # ================================================================
 # 1. Section: Controler Class
@@ -29,12 +32,12 @@ from .vision import visualize
 class Controller:
     def __init__(self, sim: MiniprojectSimulation):
         from flygym.examples.locomotion import TurningController
-        from matplotlib.animation import FuncAnimation
+
         self.turning_controller = TurningController(sim.timestep)
         self.olfaction = Olfaction()
-        self.wind = Wind()
-        self.vision = Vision()        self.frames = []
-
+        self.wind = Wind(sim)
+        self.vision = Vision()
+        self.frames = []
 
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
@@ -42,13 +45,16 @@ class Controller:
         # OLFACTION
         olfaction = sim.get_olfaction(sim.fly.name)
         smooth_olfaction = self.olfaction.process_olfaction(olfaction)
-        lateral_olfactation = average_olfaction_signal(smooth_olfaction)
-        odor_drives = odor_intensity_to_control_signal(lateral_olfactation, attractive_gain=-800)
+        lateral_olfaction = average_olfaction_signal(smooth_olfaction)
+        odor_drives = odor_intensity_to_control_signal(
+            lateral_olfaction, attractive_gain=-800
+        )
         self.olfaction.current_signal = odor_drives
 
         # WIND (will update odor information)
-        #wind = sim.get_antenna_data(sim.fly.name)
-        #wind_x = get_wind_velocity(wind)
+        wind = sim.get_antenna_data(sim.fly.name)
+
+        # wind_x = get_wind_velocity(wind)
 
         # VISION
         vision_signal = np.array([0.0, 0.0])
@@ -59,40 +65,10 @@ class Controller:
             self.vision.add_signal(vision_signal)
 
         # UPDATE THIS
-        #updated_olfaction = update_olfaction(lateral_olfactation, wind_x)
+        # updated_olfaction = update_olfaction(lateral_olfactation, wind_x)
         control_signals = odor_drives + vision_signal
 
         drives = damp_drives_for_rough_terrain(control_signals)
         joint_angles, adhesion = self.turning_controller.step(drives)
         self.frames.append(visualize.produce_fly_view(sim))
         return joint_angles, adhesion
-
-
-class Vision():
-    def __init__(self, max_size: int = 100):
-        self.signal_history: list[np.ndarray] = []
-        self.max_size = max_size
-        self.current_signal = [0.0, 0.0]
-
-    @property
-    def history_size(self) -> int:
-        return len(self.signal_history)
-
-    @property
-    def history_sum(self) -> float:
-        return np.sum(self.signal_history)
-
-    def add_signal(self, signal: np.ndarray) -> None:
-        self.signal_history.append(signal)
-        self.current_signal = signal
-
-        if self.history_size > self.max_size:
-            self.signal_history.pop(0)
-
-    @property
-    def is_active(self) -> bool:
-        if self.history_size == self.max_size:
-            return self.history_sum > 0
-
-        return False
-    

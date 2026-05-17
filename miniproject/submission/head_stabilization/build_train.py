@@ -16,7 +16,6 @@ from miniproject.simulation import MiniprojectSimulation
 from .simple_controller import SimpleController
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -99,8 +98,7 @@ def get_thorax_roll_pitch_yaw(sim: MiniprojectSimulation) -> tuple:
 
     # 2. Find thorax index
     thorax_idx = next(
-        i for i, seg in enumerate(body_segments)
-        if seg.name == "c_thorax"
+        i for i, seg in enumerate(body_segments) if seg.name == "c_thorax"
     )
 
     # 3. Get thorax quaternion from MuJoCo data

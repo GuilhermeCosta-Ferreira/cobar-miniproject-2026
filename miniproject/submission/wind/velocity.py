@@ -4,7 +4,6 @@
 import numpy as np
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -22,10 +21,11 @@ def get_wind_velocity(wind: dict) -> float:
 # 1.1 Subsection: Helper Functions
 # ──────────────────────────────────────────────────────
 def _get_vector(wind: dict) -> np.ndarray:
-    left_velocity = wind['l']['qvel']
-    right_velocity = wind['r']['qvel']
+    left_velocity = wind["l"]["qvel"]
+    right_velocity = wind["r"]["qvel"]
 
     return np.mean([left_velocity, right_velocity], axis=0)
+
 
 def _project_x(wind_vector: np.ndarray) -> float:
     return wind_vector[0]

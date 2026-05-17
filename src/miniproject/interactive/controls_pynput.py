@@ -105,7 +105,9 @@ class KeyboardControlPynput:
             if key == "a":
                 if self.prev_gain_left < 0 or self.prev_gain_right < 0:
                     gain_right = -0.6
-                    gain_left = -1.2  # Does not make sense but seems to generate the correct behavior (e.g outer leg has higher gain than outside leg ...)
+                    gain_left = (
+                        -1.2
+                    )  # Does not make sense but seems to generate the correct behavior (e.g outer leg has higher gain than outside leg ...)
                 else:
                     gain_left = 0.4
                     gain_right = 1.2

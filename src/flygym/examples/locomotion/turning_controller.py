@@ -3,7 +3,6 @@ import numpy as np
 from flygym.examples.locomotion.cpg_network import CPGNetwork
 from flygym.examples.locomotion.preprogrammed_steps import PreprogrammedSteps
 
-
 _tripod_phase_biases = np.pi * np.array(
     [
         [0, 1, 0, 1, 0, 1],

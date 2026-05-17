@@ -9,12 +9,10 @@ from numpy.random import RandomState
 
 from .build_train import run_simulation
 
-
-
 # ================================================================
 # 3. Section: MAIN
 # ================================================================
-if __name__ == '__main__':
+if __name__ == "__main__":
     random_state = RandomState(0)
     output_basedir = Path("outputs/head_stabilization/random_exploration/")
 

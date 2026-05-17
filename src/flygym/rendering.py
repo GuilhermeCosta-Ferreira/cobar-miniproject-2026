@@ -32,7 +32,9 @@ class Renderer:
         self.mj_model = mj_model
         self._cameras_intern_id_lookup = self._resolve_camera_spec(camera)
         self.camera_res = camera_res
-        self.stabilized_cam_indices = set() if stabilized_cam_indices is None else set(stabilized_cam_indices)
+        self.stabilized_cam_indices = (
+            set() if stabilized_cam_indices is None else set(stabilized_cam_indices)
+        )
 
         nrows, ncols = camera_res
         self.mj_renderer = mj.Renderer(mj_model, nrows, ncols, **kwargs)
@@ -103,7 +105,9 @@ class Renderer:
     def render_as_needed(self, mj_data: mj.MjData) -> bool:
         if mj_data.time >= self._last_render_time_sec + self._secs_between_renders:
             self._last_render_time_sec = mj_data.time
-            for i, (cam_name, internal_cam_id) in enumerate(self._cameras_intern_id_lookup.items()):
+            for i, (cam_name, internal_cam_id) in enumerate(
+                self._cameras_intern_id_lookup.items()
+            ):
                 if i in self.stabilized_cam_indices:
                     self._stabilize_cam(mj_data.cam(internal_cam_id))
                 self.mj_renderer.update_scene(mj_data, internal_cam_id)

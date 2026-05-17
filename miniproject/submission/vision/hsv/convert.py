@@ -26,6 +26,7 @@ def convert_to_hsv(image: np.ndarray) -> np.ndarray:
 
     return rgb_to_hsv(image_rgb)
 
+
 def convert_to_hsv_fast(image: np.ndarray) -> np.ndarray:
     image = np.asarray(image)
 

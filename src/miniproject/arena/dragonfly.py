@@ -8,7 +8,7 @@ class DragonFlyMixin:
     @cached_property
     def _dragonflies(self):
         return []
-    
+
     @cached_property
     def _dragonfly_geoms(self):
         return []
@@ -84,7 +84,7 @@ class DragonFlyMixin:
                 "head": head_geom,
                 "abdomen": abdomen_geom,
                 "wing_l": wing_l_geom,
-                "wing_r": wing_r_geom
+                "wing_r": wing_r_geom,
             }
         )
         return dragonfly

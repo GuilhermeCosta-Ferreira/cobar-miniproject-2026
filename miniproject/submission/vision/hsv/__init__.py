@@ -7,5 +7,5 @@ __all__ = [
     "hue_to_degree",
     "get_hsv_values",
     "get_hsv_mask",
-    "get_hsv_mask_fast"
+    "get_hsv_mask_fast",
 ]

@@ -191,6 +191,7 @@ def get_variables(
         "fwd_disp_win_diff": fwd_disp_win_diff,
     }
 
+
 def path_integrate(
     data: dict[str, np.ndarray],
     heading_model: Callable[[np.ndarray], np.ndarray],
@@ -266,6 +267,7 @@ def path_integrate(
         "fwd_disp_win_diff_pred": fwd_disp_win_diff_pred,
         "fwd_disp_win_diff_actual": fwd_disp_win_diff_actual,
     }
+
 
 class BaseBallArena(FlatGroundWorld):
     def __init__(

@@ -41,6 +41,10 @@ flowchart LR
 - no odor but wind --> crosswind casting (zig-zag behaviour)
 - reacquired odor --> reduce casting and resume upwind advance
 
+[Encoding of Wind Direction by Central Neurons in Drosophila](https://www.cell.com/neuron/fulltext/S0896-6273(19)30219-3)
+
+- direction encoded by the difference between the 2 antennae's deflection
+
 ### Detecting threats (+ avoiding "Moving Obstacle")
 
 [Object displacement-sensitive visual neurons drive freezing in Drosophila](https://doi.org/10.1016/j.cub.2020.04.068)
