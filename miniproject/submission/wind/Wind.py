@@ -2,6 +2,8 @@
 # 0. Section: IMPORTS
 # ================================================================
 from dataclasses import dataclass
+import numpy as np
+import mujoco
 from .quaternions import (
     mujoco_to_numpy_quaternion,
     numpy_to_mujoco_quaternion,
@@ -16,20 +18,38 @@ from .quaternions import (
 # ================================================================
 @dataclass
 class Wind:
-    def __init__(self, model):
+    def __init__(self, model: mujoco.MjModel) -> None:
+        """Cache rest-pose antenna geometry needed to compute wind-driven deflections.
+
+        The pedicel (fixed, no joints) sits between the funiculus and the thorax in
+        the kinematic chain, so its rest quaternion is stored to transform funiculus
+        deflections into the fly's egocentric frame.
+
+        Args:
+            model: MuJoCo model object exposing body_pos and body_quat accessors.
+        """
         # We need to store the rest pose of the antenna to be able to compute the deflection caused by the wind.
         # Since the pedicel is between the funiculus and the thorax in the kinematic chain, we need it to convert the funiculus deflection to the fly's reference frame.
         # The pedicel has no joints, so we can cache its position in the rest pose and use it as a reference for the funiculus deflection.
         self.funiculus_position_0 = [
-            model.body_pos(model.body_name2id("funiculus_l")),
-            model.body_pos(model.body_name2id("funiculus_r")),
+            model.body_pos[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "funiculus_l")],
+            model.body_pos[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "funiculus_r")],
         ]
         self.pedicel_angle_0 = [
-            model.body_quat(model.body_name2id("pedicel_l")),
-            model.body_quat(model.body_name2id("pedicel_r")),
+            model.body_quat[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "pedicel_l")],
+            model.body_quat[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, "pedicel_r")],
         ]
 
-    def _funiculus_position(self, antenna_data):
+    def _funiculus_position(self, antenna_data: dict[str, dict[str, np.ndarray]]) -> list[np.ndarray]:
+        """Rotate the rest-pose funiculus positions by the current antenna quaternions.
+
+        Args:
+            antenna_data: Dict with keys "l" and "r", each containing a "qpos" quaternion
+                representing the current orientation of the left/right antenna joint.
+
+        Returns:
+            List[np.ndarray]: [rotated_position_l, rotated_position_r] in world frame.
+        """
         qpos_l = antenna_data["l"]["qpos"]
         qpos_r = antenna_data["r"]["qpos"]
 
@@ -37,16 +57,35 @@ class Wind:
         funiculus_position_r = quat_rotate(qpos_r, self.funiculus_position_0[1])
 
         return [funiculus_position_l, funiculus_position_r]
-    
-    def _compute_deflection(self, funiculus_position):
+
+    def _compute_deflection(self, funiculus_position: list[np.ndarray]) -> list[np.ndarray]:
+        """Compute the displacement of each funiculus from its rest position.
+
+        Args:
+            funiculus_position: List[np.ndarray] of current [left, right] funiculus positions.
+
+        Returns:
+            List[np.ndarray]: [deflection_l, deflection_r] displacement vectors.
+        """
         # The deflection is the difference between the current funiculus position and the rest position.
         deflection_l = funiculus_position[0] - self.funiculus_position_0[0]
         deflection_r = funiculus_position[1] - self.funiculus_position_0[1]
 
         return [deflection_l, deflection_r]
-    
-    def _deflection_to_egocentric(self, deflection):
-        # In order to calculate a drive, we need to express the funiculus deflection in the fly's (thorax) frame of reference. 
+
+    def _deflection_to_egocentric(self, deflection: list[np.ndarray]) -> list[np.ndarray]:
+        """Express funiculus deflections in the fly's thorax (egocentric) frame.
+
+        Applies the inverse of the cached pedicel rest quaternion to rotate each
+        deflection vector out of the world frame and into the fly-centric frame.
+
+        Args:
+            deflection: List[np.ndarray] of [left, right] world-frame deflection vectors.
+
+        Returns:
+            List[np.ndarray]: [egocentric_deflection_l, egocentric_deflection_r].
+        """
+        # In order to calculate a drive, we need to express the funiculus deflection in the fly's (thorax) frame of reference.
         # Since the pedicel is between the funiculus and the thorax in the kinematic chain, we can use it to convert the funiculus deflection to the fly's reference frame.
         pedicel_rotation_l = quat_inv(self.pedicel_angle_0[0])
         pedicel_rotation_r = quat_inv(self.pedicel_angle_0[1])
@@ -55,15 +94,51 @@ class Wind:
         egocentric_deflection_r = quat_rotate(pedicel_rotation_r, deflection[1])
 
         return [egocentric_deflection_l, egocentric_deflection_r]
-    
-    def _generate_control_signal(self, egocentric_deflection, fwd_k=1, lat_k=1):
+
+    def _generate_control_signal(self, egocentric_deflection: list[np.ndarray], bias: float = 0, lat_k: float = 1, fwd_k: float = 1) -> np.ndarray:
+        """Convert egocentric antenna deflections into a [left, right] motor drive signal.
+
+        Lateral (y-axis) deflection difference steers the fly; forward (x-axis) deflection
+        sum scales both sides to produce upwind thrust. The signal is inverted so the fly
+        turns toward the wind source.
+
+        Args:
+            egocentric_deflection: List[np.ndarray] of [left, right] deflection vectors in
+                the fly's frame, each of shape (3,).
+            bias: Additive offset applied to both channels (default 0).
+            lat_k: Gain on the lateral (steering) component (default 1).
+            fwd_k: Gain on the forward (thrust) component (default 1).
+
+        Returns:
+            np.ndarray: Shape (2,) array of [left_drive, right_drive].
+        """
         # We use the deflection of the fly's antennae to generate a control signal that can be used to steer the fly.
-        # We separate this drive into a magnitude and a lateral drive. The magnitude is proportional to the sum .
-        lateral_drive = lat_k * (egocentric_deflection[0][1] - egocentric_deflection[1][1]) # assymetry: difference between the x components of each antenna's deflection
-        forward_drive = fwd_k * (egocentric_deflection[0][0] + egocentric_deflection[1][0]) # magnitude: sum of the y components of each antenna's deflection
-        return forward_drive, lateral_drive
-    
-    def process_wind(self, antenna_data):
+        # By using the right and left deflection of the antennae, we can generate a differential drive signal (inverted, to go upwind).
+        control_signal = np.array([
+            egocentric_deflection[0][1],
+            egocentric_deflection[1][1],
+        ]) * lat_k
+        # By using the forward and backward deflection of the antennae, we can scale the signal on both sides to generate a forward drive signal.
+        fwd_signal = np.sum(np.array([
+            egocentric_deflection[0][0],
+            egocentric_deflection[1][0]
+        ]))
+        control_signal += fwd_signal * fwd_k + bias
+        return control_signal
+
+    def process_wind(self, antenna_data: dict[str, dict[str, np.ndarray]]) -> np.ndarray:
+        """Run the full wind-sensing pipeline and return a motor drive signal.
+
+        Chains funiculus position estimation, deflection computation, egocentric
+        transformation, and control signal generation.
+
+        Args:
+            antenna_data: Dict with keys "l" and "r", each containing a "qpos" quaternion
+                for the current antenna joint orientation.
+
+        Returns:
+            np.ndarray: Shape (2,) array of [left_drive, right_drive].
+        """
         funiculus_position = self._funiculus_position(antenna_data)
         deflection = self._compute_deflection(funiculus_position)
         egocentric_deflection = self._deflection_to_egocentric(deflection)
