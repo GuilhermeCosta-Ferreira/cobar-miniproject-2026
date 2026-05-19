@@ -2,6 +2,7 @@
 # 0. Section: IMPORTS
 # ================================================================
 import numpy as np
+from matplotlib import pyplot as plt
 
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from .hsv import convert_to_hsv, hue_to_degree, get_hsv_values, get_hsv_mask_fas
 
 LEAF_COLOR: str = "#00E500"
 DATASET_PATH: Path = Path(
-    "submission/datasets/dataset_level2_nr_seeds_6_nr_ite_100000.npy"
+    "submission/datasets/failed_trial_nr_seeds_1_nr_ite_50000.npy"
 )
 # target color(--hsv 120 100% 89.804%)
 
@@ -25,7 +26,7 @@ def obstacle_by_hue(
     tolerance_hue: float = 5,
     min_saturation: float = 0.3,
     min_value: float = 0.8,
-    height_threshold: int = 75,
+    height_threshold: int = 100,
 ) -> np.ndarray:
     # 1. Builds a hsv dependent mask (isolate bright leafs)
     mask = get_hsv_mask_fast(
@@ -90,9 +91,42 @@ if __name__ == "__main__":
         if is_flipped(img):
             continue
 
-        img = prepare_image_for_png(img)
-        centroids = obstacle_by_hue(img)
+        mask = get_hsv_mask_fast(
+            image=img,
+            target_hue=120,
+            tolerance_hue=5,
+            min_saturation=0.3,
+            min_value=0.8,
+        )
 
-        print(centroids)
-        if centroids:
-            break
+        obstacle_centroids = get_obstacles_by_height_fast(mask, 100)
+
+        print()
+        print(obstacle_centroids)
+        print()
+
+        signals = get_signals_from_centroids(
+            obstacle_centroids,
+            np.asarray(img.shape),
+        )
+
+        img = prepare_image_for_png(img)
+        fig, axs = plt.subplots(1, 2, figsize=(14, 8))
+
+        # Original image
+        axs[0].imshow(img)
+        for obs in obstacle_centroids:
+            axs[0].scatter(obs[0], obs[1], s=30)
+        axs[0].set_title("Image + centroids")
+        axs[0].axis("off")
+
+        # Mask
+        axs[1].imshow(mask, cmap="gray")
+        for obs in obstacle_centroids:
+            axs[1].scatter(obs[0], obs[1], s=30)
+        axs[1].set_title("Mask")
+        axs[1].axis("off")
+
+        fig.suptitle(f"signals = {signals}")
+        plt.tight_layout()
+        plt.show()

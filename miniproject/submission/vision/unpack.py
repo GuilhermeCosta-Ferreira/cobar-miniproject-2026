@@ -62,5 +62,5 @@ def prepare_image_for_png(img: np.ndarray) -> np.ndarray:
 # ================================================================
 if __name__ == "__main__":
     unpack_dataset(
-        Path("submission/datasets/dataset_level2_nr_seeds_6_nr_ite_100000.npy")
+        Path("submission/datasets/failed_trial_2_nr_seeds_1_nr_ite_50000.npy")
     )

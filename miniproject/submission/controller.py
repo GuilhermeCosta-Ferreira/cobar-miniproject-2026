@@ -3,12 +3,9 @@
 # ================================================================
 import numpy as np
 
-import matplotlib.pyplot as plt
 from miniproject.simulation import MiniprojectSimulation
-from flygym.examples.locomotion.turning_controller import TurningController
 from .hybrid_controller import HybridTurningController
 
-from .turning_controller import damp_drives_for_rough_terrain
 from .wind import (
     Wind,
 )
@@ -20,7 +17,6 @@ from .olfaction import (
 from .vision import (
     obstacle_by_hue,
     produce_human_view,
-    visualize,
     Vision,
 )
 
@@ -30,7 +26,6 @@ from .vision import (
 class Controller:
     def __init__(self, sim: MiniprojectSimulation):
         self.turning_controller = HybridTurningController(sim.timestep)
-        #self.turning_controller = TurningController(sim.timestep)
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
@@ -67,9 +62,21 @@ class Controller:
         #updated_olfaction = update_olfaction(lateral_olfactation, wind_x)
         #control_signals = odor_drives + vision_signal + wind_signal
         control_signals = odor_drives + vision_signal
+        control_signals = adapt_drives(control_signals)
         #control_signals = odor_drives
 
         #drives = damp_drives_for_rough_terrain(control_signals)
         joint_angles, adhesion = self.turning_controller.step(sim, control_signals)
         #joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
+
+
+def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
+    drives = np.asarray(drives, dtype=float)
+
+    max_abs = np.max(np.abs(drives))
+
+    if max_abs <= max_signal:
+        return drives
+
+    return drives / max_abs * max_signal
