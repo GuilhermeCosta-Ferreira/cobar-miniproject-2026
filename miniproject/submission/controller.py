@@ -67,8 +67,9 @@ class Controller:
         #updated_olfaction = update_olfaction(lateral_olfactation, wind_x)
         #control_signals = odor_drives + vision_signal + wind_signal
         control_signals = odor_drives + vision_signal
+        #control_signals = odor_drives
 
-        drives = damp_drives_for_rough_terrain(control_signals)
-        joint_angles, adhesion = self.turning_controller.step(sim, drives)
+        #drives = damp_drives_for_rough_terrain(control_signals)
+        joint_angles, adhesion = self.turning_controller.step(sim, control_signals)
         #joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
