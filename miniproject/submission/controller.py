@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from miniproject.simulation import MiniprojectSimulation
 from flygym.examples.locomotion.turning_controller import TurningController
+from .hybrid_controller import HybridTurningController
 
 from .turning_controller import damp_drives_for_rough_terrain
 from .wind import (
@@ -17,10 +18,10 @@ from .olfaction import (
     Olfaction,
 )
 from .vision import (
-    obstacle_by_hue, 
-    produce_human_view, 
+    obstacle_by_hue,
+    produce_human_view,
     visualize,
-    Vision, 
+    Vision,
 )
 
 # ================================================================
@@ -28,11 +29,10 @@ from .vision import (
 # ================================================================
 class Controller:
     def __init__(self, sim: MiniprojectSimulation):
-        from flygym.examples.locomotion import TurningController
-        self.turning_controller = TurningController(sim.timestep)
+        self.turning_controller = HybridTurningController(sim.timestep)
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
-        self.vision = Vision()        
+        self.vision = Vision()
         self.frames = []
 
 
@@ -40,6 +40,7 @@ class Controller:
         current_step = sim._curr_step
 
         # OLFACTION
+        """
         olfaction = sim.get_olfaction(sim.fly.name)
         smooth_olfaction = self.olfaction.process_olfaction(olfaction)
         lateral_olfaction = average_olfaction_signal(smooth_olfaction)
@@ -49,7 +50,7 @@ class Controller:
         # WIND (will update odor information)
         wind = sim.get_antenna_data(sim.fly.name)
         wind_signal = self.wind.process_wind(wind)
-        
+
         #wind_x = get_wind_velocity(wind)
 
         # VISION
@@ -65,5 +66,6 @@ class Controller:
         control_signals = odor_drives + vision_signal + wind_signal
 
         drives = damp_drives_for_rough_terrain(control_signals)
-        joint_angles, adhesion = self.turning_controller.step(drives)
+        """
+        joint_angles, adhesion = self.turning_controller.step(sim)
         return joint_angles, adhesion
