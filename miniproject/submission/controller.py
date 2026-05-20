@@ -27,13 +27,13 @@ from .vision import (
 # 1. Section: Controler Class
 # ================================================================
 class Controller:
-    def __init__(self, sim: MiniprojectSimulation):
-        from flygym.examples.locomotion import TurningController
+    def __init__(self, sim: MiniprojectSimulation, **kwargs) -> None:
         self.turning_controller = TurningController(sim.timestep)
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()        
         self.frames = []
+        self.extra_info = kwargs
 
 
     def step(self, sim: MiniprojectSimulation):
@@ -48,7 +48,17 @@ class Controller:
 
         # WIND (will update odor information)
         wind = sim.get_antenna_data(sim.fly.name)
-        wind_signal = self.wind.process_wind(wind)
+        if 'lat_k' in self.extra_info:
+            lat_k = self.extra_info['lat_k']
+        else: 
+            lat_k = 5 # empirically determined
+        if 'fwd_k' in self.extra_info:
+            fwd_k = self.extra_info['fwd_k']
+        else:
+            fwd_k = 5 # empirically determined
+        wind_signal = self.wind.process_wind(wind, bias=0, lat_k=lat_k, fwd_k=fwd_k)
+
+        self.wind.add_signal(wind_signal)
         
         #wind_x = get_wind_velocity(wind)
 
