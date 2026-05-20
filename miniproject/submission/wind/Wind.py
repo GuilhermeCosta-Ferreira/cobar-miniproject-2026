@@ -117,18 +117,16 @@ class Wind:
         Returns:
             np.ndarray: Shape (2,) array of [left_drive, right_drive].
         """
-        print("wind angle", wind_angle)
         drive_angle = wind_angle + np.pi  # Invert angle to turn toward the wind
-        print("drive_angle",drive_angle)
-        forward_component = lat_k * np.cos(drive_angle) * np.ones(2)  
-        lateral_component = fwd_k * np.sin(drive_angle)
+        forward_component = fwd_k * np.cos(drive_angle) * np.ones(2)  
+        lateral_component = lat_k * np.sin(drive_angle)
         if lateral_component > 0:
             lateral_component_v = np.array([0, lateral_component])
         else:
             lateral_component_v = np.array([lateral_component, 0])
 
-        control_signal = forward_component + lateral_component_v + bias
-
+        control_signal = forward_component + lateral_component_v
+        
         return control_signal
 
     def process_wind(
