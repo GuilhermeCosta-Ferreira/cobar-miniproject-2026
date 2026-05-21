@@ -60,8 +60,6 @@ class Controller:
         smell = sim.get_olfaction(sim.fly.name)
         odor_velocity = self.olfaction.smell_to_velocity(smell)
 
-        drives = self.inverse_model.predict(np.array([odor_velocity]))[0]
-
         # WIND
         """
         lateral_olfaction = average_olfaction_signal(smooth_olfaction)
@@ -72,6 +70,7 @@ class Controller:
             wind_signal = adapt_drives(wind_signal, max_signal = 0.5)
         else:
             wind_signal = np.array([0.0, 0.0])
+        """
 
         # VISION
         vision_signal = np.array([0.0, 0.0])
@@ -81,19 +80,22 @@ class Controller:
 
             self.vision.add_signal(vision_signal)
 
+        """
         # UPDATE THIS
         control_signals = odor_drives + vision_signal + wind_signal
         control_signals = adapt_drives(control_signals)
         """
 
+        drives = self.inverse_model.predict(np.array([odor_velocity]))[0]
         self.current_drive = drives
 
-        #drives = damp_drives_for_rough_terrain(control_signals)
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
-        #joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
 
 
+# ──────────────────────────────────────────────────────
+# 1.1 Subsection: Helper Functions
+# ──────────────────────────────────────────────────────
 def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
     drives = np.asarray(drives, dtype=float)
 

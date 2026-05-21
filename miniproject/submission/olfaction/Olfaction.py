@@ -1,3 +1,5 @@
+"""Module resposible for olfaction control, this is the main driver of behaviour"""
+
 # ================================================================
 # 0. Section: IMPORTS
 # ================================================================
@@ -12,7 +14,11 @@ from dataclasses import dataclass, field
 @dataclass
 class Olfaction:
     olfaction_smooth: np.ndarray = field(default_factory=lambda: np.zeros((4, 1)))
-    current_signal: np.ndarray = field(default_factory=lambda: np.zeros(2,))
+    current_signal: np.ndarray = field(
+        default_factory=lambda: np.zeros(
+            2,
+        )
+    )
     alpha: float = 0.05
 
     _intensity_hist: list = field(default_factory=list)
@@ -21,8 +27,6 @@ class Olfaction:
     forward_velocity: float = 10.0
     max_turn_velocity: float = 5.0
     min_forward_velocity: float = 5.0
-
-
 
     # ================================================================
     # 2. Section: Properties
@@ -34,8 +38,6 @@ class Olfaction:
     @property
     def velocity_hist(self):
         return np.asarray(self._velocity_history)
-
-
 
     # ================================================================
     # 3. Section: Methods
@@ -52,10 +54,9 @@ class Olfaction:
             lat_olfaction,
             self.forward_velocity,
             self.max_turn_velocity,
-            self.min_forward_velocity
+            self.min_forward_velocity,
         )
         return odor_velocity
-
 
     # ──────────────────────────────────────────────────────
     # 3.1 Subsection: Helper Functions
@@ -72,7 +73,9 @@ class Olfaction:
 
     def get_average_signal(self) -> np.ndarray:
         """Assumes there is only one type of smell and averages over each antenna"""
-        average = np.average(self.olfaction_smooth[:, 0].reshape(2, 2), axis=0, weights=[9, 1])
+        average = np.average(
+            self.olfaction_smooth[:, 0].reshape(2, 2), axis=0, weights=[9, 1]
+        )
         self._intensity_hist.append(average)
         return average
 
@@ -81,7 +84,7 @@ class Olfaction:
         lat_olfaction: np.ndarray,
         forward_velocity: float,
         max_turn_velocity: float,
-        min_forward_velocity: float
+        min_forward_velocity: float,
     ) -> np.ndarray:
         """Builds a vector with forward and yaw rate"""
         mean_odor = lat_olfaction.mean()
