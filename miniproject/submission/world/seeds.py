@@ -6,12 +6,12 @@ import numpy as np
 # ================================================================
 # 1. Section: Pre-Defined Seeds
 # ================================================================
-SEEDS: list[int] = [42]
+SEEDS: list[int] = [42, 1, 67, 777]
 
 
 # ──────────────────────────────────────────────────────
 # 1.1 Subsection: Augment seeds
 # ──────────────────────────────────────────────────────
-nr_extra_seeds = 5
+nr_extra_seeds = 6
 steps = int(np.round((10000 - 100) / nr_extra_seeds))
 SEEDS = np.concatenate([SEEDS, np.arange(100, 10000, steps)]).tolist()

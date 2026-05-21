@@ -25,13 +25,23 @@ _tripod_phase_biases = np.pi * np.array(
     ]
 )
 _tripod_coupling_weights = (_tripod_phase_biases > 0) * 10
-"""_correction_vectors = {
+_correction_vectors = {
+    # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
+    # unit: radian
+    "f": np.array([0, 0, 0, 0, 0, 0, 0]),
+    "m": np.array([0, 0, 0, 0, 0, 0, 0]),
+    "h": np.array([0, 0, 0, 0, 0, 0, 0]),
+}
+"""
+_correction_vectors = {
     # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
     # unit: radian
     "f": np.array([-0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
     "m": np.array([-0.015, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
     "h": np.array([0, 0, 0, -0.02, 0, 0.01, -0.02]),
-}"""
+}
+"""
+"""
 _correction_vectors = {
     # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
     # unit: radian
@@ -39,6 +49,7 @@ _correction_vectors = {
     "m": np.array([0.0, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
     "h": np.array([-0.02, 0, 0, -0.02, 0, 0.01, -0.02]),
 }
+"""
 _right_leg_inversion = [1, -1, -1, 1, -1, 1, 1]
 _stumbling_force_threshold = -1
 _correction_rates: dict[str, tuple[int, int]] = {"retraction": (800, 700), "stumbling": (2200, 1800)}
@@ -199,6 +210,7 @@ class HybridTurningController:
                 self.cpg_network.curr_phases[i] % (2 * np.pi)
             )
             my_joints_angles += net_correction * self.correction_vectors[leg[1]]
+            #print(leg[1])
             joints_angles.append(my_joints_angles)
 
             # 4.5 Get adhesion on/off signal

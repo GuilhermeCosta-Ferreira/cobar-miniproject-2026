@@ -28,6 +28,7 @@ def obstacle_by_hue(
     min_saturation: float = 0.3,
     min_value: float = 0.8,
     height_threshold: int = 100,
+    turn_gain: float = 1.5,
 ) -> np.ndarray:
     # 1. Builds a hsv dependent mask (isolate bright leafs)
     mask = get_hsv_mask_fast(
@@ -45,6 +46,7 @@ def obstacle_by_hue(
     signals = get_signals_from_centroids(
         obstacle_centroids,
         np.asarray(image.shape),
+        turn_gain=turn_gain,
     )
 
     return signals
@@ -340,6 +342,7 @@ if __name__ == "__main__":
         signals = get_signals_from_centroids(
             obstacle_centroids,
             np.asarray(img.shape),
+            turn_gain=1
         )
 
         img = prepare_image_for_png(img)
