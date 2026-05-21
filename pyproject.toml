@@ -43,6 +43,7 @@ dependencies = [
     "pygame>=2.6.1",
     "matplotlib-tufte",
     "seaborn>=0.13.2",
+    "optuna>=4.8.0",
 ]
 
 [project.optional-dependencies]

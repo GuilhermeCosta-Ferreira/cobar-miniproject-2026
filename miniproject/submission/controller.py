@@ -27,13 +27,61 @@ class Controller:
         sim: MiniprojectSimulation,
         config: dict,
     ):
+        self.config = config
+
         self.base_vf = config["controller"]["base_vf"]
         self.max_vt = config["controller"]["max_vt"]
         self.dropoff_vt = config["controller"]["dropoff_vt"]
 
         self.olfaction_gain = config["olfaction"]["gain"]
 
-        self.turning_controller = HybridTurningController(sim.timestep)
+        self.min_height = config["vision"]["min_height"]
+        self.scare_height = config["vision"]["scare_height"]
+        self.vision_gain = config["vision"]["gain"]
+        self.slow_down_rate = config["vision"]["slow_down_rate"]
+        self.vision_alpha = config["vision"]["alpha"]
+
+        hybrid_cfg = config["hybrid"]
+        f_cfg = hybrid_cfg["f"]
+        m_cfg = hybrid_cfg["m"]
+        h_cfg = hybrid_cfg["h"]
+        self.max_increment = config["hybrid_max_increment"]
+
+        self.correction_vectors = {
+            "f": np.array([
+                f_cfg["coxa_lift"],
+                f_cfg["coxa_roll"],
+                f_cfg["coxa_yaw"],
+                f_cfg["femur_lift"],
+                f_cfg["femur_roll"],
+                f_cfg["tibia_lift"],
+                f_cfg["tarsus1_lift"],
+            ]),
+            "m": np.array([
+                m_cfg["coxa_lift"],
+                m_cfg["coxa_roll"],
+                m_cfg["coxa_yaw"],
+                m_cfg["femur_lift"],
+                m_cfg["femur_roll"],
+                m_cfg["tibia_lift"],
+                m_cfg["tarsus1_lift"],
+            ]),
+            "h": np.array([
+                h_cfg["coxa_lift"],
+                h_cfg["coxa_roll"],
+                h_cfg["coxa_yaw"],
+                h_cfg["femur_lift"],
+                h_cfg["femur_roll"],
+                h_cfg["tibia_lift"],
+                h_cfg["tarsus1_lift"],
+            ]),
+        }
+
+        self.turning_controller = HybridTurningController(
+            sim.timestep,
+            max_increment = self.max_increment,
+            correction_vectors = self.correction_vectors
+        )
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
@@ -63,6 +111,12 @@ class Controller:
 
         self.current_drive = [0.0, 0.0]
         self.inverse_model = load(MODEL_PATH)
+
+        signal_20 = self.inverse_model.predict(np.array([np.array([20,0])]))[0]
+        signal_10 = self.inverse_model.predict(np.array([np.array([10,0])]))[0]
+
+        print(f"Signal for 20 forward: {signal_20}")
+        print(f"Signal for 10 forward: {signal_10}")
 
         self._velocity_history: list = []
         self._drive_history: list = []
@@ -109,7 +163,16 @@ class Controller:
         # VISION
         vision_velocity = np.array([0.0, 0.0])
         if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
-            vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
+            vision_velocity = self.vision.obstacle_to_velocity(
+                sim = sim,
+                current_forward_vel = odor_velocity[0],
+                min_height = self.min_height,
+                scary_height = self.scare_height,
+                gain = self.vision_gain,
+                slow_down_rate = self.slow_down_rate,
+                max_vt = self.max_vt,
+                alpha = self.vision_alpha
+            )
 
         velocity = odor_velocity + vision_velocity
         velocity = drifter(

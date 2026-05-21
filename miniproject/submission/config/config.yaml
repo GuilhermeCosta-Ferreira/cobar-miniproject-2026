@@ -8,4 +8,39 @@ controller:
   dropoff_vt: 5
 
 olfaction:
-  gain: 3
+  gain: 5
+
+vision:
+   min_height: 200
+   scare_height: 300
+   gain: 5
+   slow_down_rate: 0.5
+   alpha: 0.1
+
+# "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
+hybrid_max_increment: 80.0
+hybrid:
+  f:
+    coxa_lift: 0.0
+    coxa_roll: 0.0
+    coxa_yaw: 0.0
+    femur_lift: 0.0
+    femur_roll: 0.0
+    tibia_lift: 0.0
+    tarsus1_lift: 0.0
+  m:
+    coxa_lift: 0.0
+    coxa_roll: 0.0
+    coxa_yaw: 0.0
+    femur_lift: 0.0
+    femur_roll: 0.0
+    tibia_lift: 0.0
+    tarsus1_lift: 0.0
+  h:
+    coxa_lift: 0.0
+    coxa_roll: 0.0
+    coxa_yaw: 0.0
+    femur_lift: 0.0
+    femur_roll: 0.0
+    tibia_lift: 0.0
+    tarsus1_lift: 0.0

@@ -18,15 +18,12 @@ from .signal_processing import get_smooth_vision
 # ================================================================
 @dataclass
 class Vision:
-    max_size: int = 100
     vision_smooth: np.ndarray = field(default_factory=lambda: np.zeros(2))
-    alpha: float = 0.05
 
     target_hue: float = 120.0
     tolerance_hue: float = 5.0
     min_saturation: float = 0.3
     min_value: float = 0.79
-    height_threshold: int = 200
 
     current_dragonfly_score: float = 0.0
     current_dragonfly_attack: bool = False
@@ -71,6 +68,12 @@ class Vision:
         self,
         sim: MiniprojectSimulation,
         current_forward_vel: float,
+        min_height: float,
+        scary_height: float,
+        gain: float,
+        slow_down_rate: float,
+        max_vt: float,
+        alpha: float,
     ) -> np.ndarray:
         step = sim._curr_step
 
@@ -89,7 +92,7 @@ class Vision:
         # 3. Extract the tall objects (x, y, height)
         obstacle_centroids = get_obstacles_by_height_fast(
             mask = mask,
-            height_threshold = self.height_threshold
+            height_threshold = min_height
         )
 
         if step % 5000 == 0:
@@ -99,14 +102,16 @@ class Vision:
             self._centroid_history.append(closest_centroid)
 
         vision_velocity = get_velocity_vector(
-            current_forward_velocity = current_forward_vel,
-            turn_speed=1.5,
             image = frame,
             centroids = obstacle_centroids,
-            scary_height = 300
+            current_forward_velocity = current_forward_vel,
+            max_turn_velocity = max_vt,
+            scary_height = scary_height,
+            gain = gain,
+            slow_down_rate = slow_down_rate
         )
 
-        self.vision_smooth = get_smooth_vision(self.vision_smooth, vision_velocity, self.alpha)
+        self.vision_smooth = get_smooth_vision(self.vision_smooth, vision_velocity, alpha)
 
         self._velocity_history.append(self.vision_smooth)
 

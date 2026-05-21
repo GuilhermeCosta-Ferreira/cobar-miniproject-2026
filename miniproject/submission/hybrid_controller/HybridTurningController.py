@@ -25,12 +25,24 @@ _tripod_phase_biases = np.pi * np.array(
     ]
 )
 _tripod_coupling_weights = (_tripod_phase_biases > 0) * 10
+"""
 _correction_vectors = {
     # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
     # unit: radian
     "f": np.array([0, 0, 0, 0, 0, 0, 0]),
     "m": np.array([0, 0, 0, 0, 0, 0, 0]),
     "h": np.array([0, 0, 0, 0, 0, 0, 0]),
+}
+_correction_vectors = {
+    "f": np.array([0.0, 0.0, 0.0, 0.004, 0.0, -0.004, 0.0]),
+    "m": np.array([0.0, 0.0, 0.0, 0.004, 0.0, -0.004, 0.0]),
+    "h": np.array([0.0, 0.0, 0.0, 0.004, 0.0, -0.004, 0.0]),
+}
+"""
+_correction_vectors = {
+    "f": np.array([-0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
+    "m": np.array([-0.015, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
+    "h": np.array([0, 0, 0, -0.02, 0, 0.01, -0.02]),
 }
 
 _right_leg_inversion = [1, -1, -1, 1, -1, 1, 1]
@@ -158,13 +170,16 @@ class HybridTurningController:
                 leg, self.cpg_network.curr_phases[i], self.cpg_network.curr_magnitudes[i]
             )
             net_correction = np.clip(net_correction, 0, self.max_increment)
-            if leg[0] == "r":
-                net_correction *= self.right_leg_inversion[i]
-
-            net_correction *= self.step_phase_multipler[leg](
+            phase_gain = self.step_phase_multipler[leg](
                 self.cpg_network.curr_phases[i] % (2 * np.pi)
             )
-            my_joints_angles += net_correction * self.correction_vectors[leg[1]]
+
+            correction_vector = self.correction_vectors[leg[1]].copy()
+
+            if leg[0] == "r":
+                correction_vector *= np.asarray(self.right_leg_inversion)
+
+            my_joints_angles += net_correction * phase_gain * correction_vector
             joints_angles.append(my_joints_angles)
 
             # 4.5 Get adhesion on/off signal

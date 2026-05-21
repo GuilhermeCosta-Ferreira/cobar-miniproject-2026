@@ -1,0 +1,18 @@
+simulation:
+  seed: 42
+  n_steps: 20000
+
+controller:
+  base_vf: 5.0
+  max_vt: 5.5
+  dropoff_vt: 5.0
+
+olfaction:
+  gain: 7.0
+
+vision:
+   min_height: 200
+   scare_height: 300
+   gain: 5
+   slow_down_rate: 0.5
+   alpha: 0.1
