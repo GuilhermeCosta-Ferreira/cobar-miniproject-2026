@@ -18,6 +18,7 @@ from .vision import (
     obstacle_by_hue,
     produce_human_view,
     Vision,
+    DragonflyAttackDetector
 )
 
 # ================================================================
@@ -35,6 +36,12 @@ class Controller:
         self.vision = Vision()
         self.frames = []
         self.vision_gain = vision_gain
+        self.vision_signal = np.array([0.0, 0.0])
+        self.dragonfly_detector = DragonflyAttackDetector(
+            attack_threshold=0.06,
+            hold_steps=10_000,
+            min_consecutive_hits=1,
+        )
 
 
     def step(self, sim: MiniprojectSimulation):
@@ -47,13 +54,11 @@ class Controller:
         odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
         self.olfaction.current_signal = odor_drives
 
-        """
-        # WIND (will update odor information)
+        
+        # WIND
         wind = sim.get_antenna_data(sim.fly.name)
-        wind_signal = self.wind.process_wind(wind)
-
-        #wind_x = get_wind_velocity(wind)
-        """
+        wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
+        
 
         # VISION
         vision_signal = np.array([0.0, 0.0])

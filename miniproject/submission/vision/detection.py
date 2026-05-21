@@ -82,6 +82,113 @@ def is_flipped(
 
     return mask_center_y < image_center_y
 
+# ──────────────────────────────────────────────────────
+# Dragonfly attack detection
+# ──────────────────────────────────────────────────────
+
+def to_uint8_rgb(img: np.ndarray) -> np.ndarray:
+    """
+    Convert image to RGB uint8.
+    Handles images in [0, 1] or [0, 255].
+    """
+    img = np.asarray(img)
+
+    if img.dtype != np.uint8:
+        if img.max() <= 1.0:
+            img = img * 255.0
+        img = np.clip(img, 0, 255).astype(np.uint8)
+
+    return img
+
+
+def stack_raw_vision(raw_vision: list[np.ndarray] | tuple[np.ndarray, ...]) -> np.ndarray:
+    """
+    Concatenate the fly's raw vision images into one panel.
+
+    """
+    eyes = [to_uint8_rgb(eye) for eye in raw_vision]
+    return np.concatenate(eyes, axis=1)
+
+
+def red_score_from_rgb(
+    img_rgb: np.ndarray,
+    r_min: float = 90,
+    dominance: float = 1.25,
+    red_minus_green_min: float = 20,
+) -> tuple[float, np.ndarray]:
+    """
+    Detect red pixels in an RGB image.
+
+    Returns
+    -------
+    score:
+        Fraction of pixels classified as red.
+    mask:
+        Boolean mask of red pixels.
+    """
+    img = to_uint8_rgb(img_rgb).astype(np.float32)
+
+    r = img[..., 0]
+    g = img[..., 1]
+    b = img[..., 2]
+
+    mask = (
+        (r > r_min)
+        & (r > dominance * g)
+        & (r > dominance * b)
+        & ((r - g) > red_minus_green_min)
+    )
+
+    score = float(mask.mean())
+    return score, mask
+
+
+def dragonfly_red_score_from_raw_vision(
+    raw_vision: list[np.ndarray] | tuple[np.ndarray, ...],
+    r_min: float = 90,
+    dominance: float = 1.25,
+    red_minus_green_min: float = 20,
+) -> tuple[float, np.ndarray]:
+    """
+    Compute dragonfly red score directly from raw fly vision.
+    """
+    raw_panel = stack_raw_vision(raw_vision)
+
+    score, mask = red_score_from_rgb(
+        raw_panel,
+        r_min=r_min,
+        dominance=dominance,
+        red_minus_green_min=red_minus_green_min,
+    )
+
+    return score, mask
+
+
+def detect_dragonfly_attack_from_raw_vision(
+    raw_vision: list[np.ndarray] | tuple[np.ndarray, ...],
+    attack_threshold: float = 0.06,
+    r_min: float = 90,
+    dominance: float = 1.25,
+    red_minus_green_min: float = 20,
+) -> tuple[bool, float]:
+    """
+    Detect whether the dragonfly is attacking based on the red-head cue.
+
+    """
+    score, _ = dragonfly_red_score_from_raw_vision(
+        raw_vision,
+        r_min=r_min,
+        dominance=dominance,
+        red_minus_green_min=red_minus_green_min,
+    )
+
+    attack_detected = score > attack_threshold
+
+    return attack_detected, score
+
+
+
+
 
 # ================================================================
 # 3. Section: MAIN
