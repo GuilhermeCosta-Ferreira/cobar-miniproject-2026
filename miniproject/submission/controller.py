@@ -12,14 +12,19 @@ from .hybrid_controller import HybridTurningController
 from .wind import (
     Wind,
 )
-from .olfaction import Olfaction
+from .olfaction import (
+    average_olfaction_signal,
+    odor_intensity_to_control_signal,
+    Olfaction,
+)
 from .vision import (
+    obstacle_by_hue,
+    produce_human_view,
     Vision,
 )
 from .threat import DragonflyAttackDetector, EscapeController
 
 MODEL_PATH = Path(__file__).resolve().parent / "models" / "turning_inverse_model.joblib"
-
 
 
 # ================================================================
@@ -29,6 +34,7 @@ class Controller:
     def __init__(
         self,
         sim: MiniprojectSimulation,
+        vision_gain: float = 1
     ):
         self.turning_controller = HybridTurningController(sim.timestep)
         self.olfaction = Olfaction()
@@ -63,27 +69,7 @@ class Controller:
         self.current_drive = [0.0, 0.0]
         self.inverse_model = load(MODEL_PATH)
 
-        self._velocity_history: list = []
-        self._drive_history: list = []
 
-
-
-    # ================================================================
-    # 2. Section: Properties
-    # ================================================================
-    @property
-    def velocity_hist(self):
-        return np.asarray(self._velocity_history)
-
-    @property
-    def drive_hist(self):
-        return np.asarray(self._drive_history)
-
-
-
-    # ================================================================
-    # 3. Section: Methods
-    # ================================================================
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
 
@@ -104,12 +90,12 @@ class Controller:
         """
 
         # VISION
-        vision_velocity = np.array([0.0, 0.0])
+        vision_signal = np.array([0.0, 0.0])
         if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
-            vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
+            frame = produce_human_view(sim)
+            vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
 
-        velocity = odor_velocity + vision_velocity
-        self._velocity_history.append(velocity)
+            self.vision.add_signal(vision_signal)
 
         """
         # UPDATE THIS
