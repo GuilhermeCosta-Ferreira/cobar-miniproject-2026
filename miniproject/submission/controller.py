@@ -3,6 +3,9 @@
 # ================================================================
 import numpy as np
 
+from pathlib import Path
+from joblib import load
+
 from miniproject.simulation import MiniprojectSimulation
 from .hybrid_controller import HybridTurningController
 
@@ -21,6 +24,9 @@ from .vision import (
 )
 from .threat import DragonflyAttackDetector, EscapeController
 
+MODEL_PATH = Path(__file__).resolve().parent / "models" / "turning_inverse_model.joblib"
+
+
 # ================================================================
 # 1. Section: Controler Class
 # ================================================================
@@ -34,6 +40,7 @@ class Controller:
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
+
         self.frames = []
         self.vision_gain = vision_gain
         self.vision_signal = np.array([0.0, 0.0])
@@ -60,27 +67,41 @@ class Controller:
         )
         self.escape_controller = EscapeController()
         self.current_drive = [0.0, 0.0]
+        self.inverse_model = load(MODEL_PATH)
 
 
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
 
         # OLFACTION
-        olfaction = sim.get_olfaction(sim.fly.name)
-        smooth_olfaction = self.olfaction.process_olfaction(olfaction)
+        smell = sim.get_olfaction(sim.fly.name)
+        odor_velocity = self.olfaction.smell_to_velocity(smell)
+
+        # WIND
+        """
         lateral_olfaction = average_olfaction_signal(smooth_olfaction)
         odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
-        self.olfaction.current_signal = odor_drives
+        if sim.enable_wind:
+            wind = sim.get_antenna_data(sim.fly.name)
+            wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
+            wind_signal = adapt_drives(wind_signal, max_signal = 0.5)
+        else:
+            wind_signal = np.array([0.0, 0.0])
+        """
 
-        # WIND. This is intentionally perception-driven, not level-flag-driven.
-        wind = sim.get_antenna_data(sim.fly.name)
-        wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
-        wind_signal = adapt_drives(wind_signal, max_signal = 0.5)
+        # VISION
+        vision_signal = np.array([0.0, 0.0])
+        if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
+            frame = produce_human_view(sim)
+            vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
 
-        # VISION - grass obstacles
-        frame = produce_human_view(sim)
-        vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
-        self.vision.add_signal(vision_signal)
+            self.vision.add_signal(vision_signal)
+
+        """
+        # UPDATE THIS
+        control_signals = odor_drives + vision_signal + wind_signal
+        control_signals = adapt_drives(control_signals)
+        """
         self.vision_signal = vision_signal
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
@@ -131,14 +152,16 @@ class Controller:
             control_signals = odor_drives + vision_signal + wind_signal
             control_signals = adapt_drives(control_signals)
 
-        self.current_drive = control_signals
+        drives = self.inverse_model.predict(np.array([odor_velocity]))[0]
+        self.current_drive = drives
 
-        #drives = damp_drives_for_rough_terrain(control_signals)
-        joint_angles, adhesion = self.turning_controller.step(sim, control_signals)
-        #joint_angles, adhesion = self.turning_controller.step(drives)
+        joint_angles, adhesion = self.turning_controller.step(sim, drives)
         return joint_angles, adhesion
 
 
+# ──────────────────────────────────────────────────────
+# 1.1 Subsection: Helper Functions
+# ──────────────────────────────────────────────────────
 def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
     drives = np.asarray(drives, dtype=float)
 
