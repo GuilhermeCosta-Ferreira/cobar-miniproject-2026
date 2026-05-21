@@ -17,6 +17,7 @@ from .velocity import get_velocity_vector
 @dataclass
 class Olfaction:
     olfaction_smooth: np.ndarray = field(default_factory=lambda: np.zeros((4, 1)))
+    current_signal: np.ndarray = field(default_factory=lambda: np.zeros(2))
     alpha: float = 0.05
 
     _intensity_hist: list = field(default_factory=list)
@@ -55,6 +56,7 @@ class Olfaction:
             self.max_turn_velocity,
             self.min_forward_velocity,
         )
+        self.current_signal = odor_velocity
         self._velocity_history.append(odor_velocity)
 
         return odor_velocity

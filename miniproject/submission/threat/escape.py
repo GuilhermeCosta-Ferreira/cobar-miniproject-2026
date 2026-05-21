@@ -14,13 +14,18 @@ class DangerConfig:
     area_weight: float = 0.40
     expansion_weight: float = 0.35
     red_weight: float = 0.15
-    planned_threshold: float = 0.18
-    panic_threshold: float = 0.60
+    planned_threshold: float = 0.20
+    panic_threshold: float = 0.55
 
 
 @dataclass
 class EscapeConfig:
     danger: DangerConfig = field(default_factory=DangerConfig)
+    watch_forward_velocity: float = 3.0
+    planned_forward_velocity: float = 13.0
+    planned_turn_velocity: float = 1.5
+    panic_forward_velocity: float = 18.0
+    panic_turn_velocity: float = 0.5
     watch_drive: float = 0.25
     planned_forward_drive: float = 1.1
     planned_turn_drive: float = 0.55
@@ -37,6 +42,7 @@ class EscapeDecision:
     mode: str
     danger_score: float
     direction: float
+    velocity: np.ndarray
     drives: np.ndarray
     stability_score: float
     unstable: bool
@@ -146,6 +152,32 @@ def compute_escape_drives(
     return np.array([base, base], dtype=float)
 
 
+def compute_escape_velocity(
+    mode: str,
+    direction: float,
+    config: EscapeConfig | None = None,
+) -> np.ndarray:
+    """
+    Convert an escape mode and direction into [forward, rotational] velocity.
+
+    """
+    cfg = config or EscapeConfig()
+
+    if mode == "watch":
+        return np.array([cfg.watch_forward_velocity, 0.0], dtype=float)
+
+    if mode == "planned_escape":
+        forward = cfg.planned_forward_velocity
+        turn = cfg.planned_turn_velocity
+    elif mode == "panic_escape":
+        forward = cfg.panic_forward_velocity
+        turn = cfg.panic_turn_velocity
+    else:
+        return np.zeros(2, dtype=float)
+
+    return np.array([forward, -direction * turn], dtype=float)
+
+
 def quat_to_up_z(quat: np.ndarray | list[float]) -> float:
     """Return the world z-component of the body +z axis for a MuJoCo wxyz quat."""
     w, x, y, z = np.asarray(quat, dtype=float)
@@ -190,6 +222,7 @@ class EscapeController:
             mode="normal",
             danger_score=0.0,
             direction=0.0,
+            velocity=np.zeros(2, dtype=float),
             drives=np.zeros(2, dtype=float),
             stability_score=1.0,
             unstable=False,
@@ -207,6 +240,7 @@ class EscapeController:
                 mode="recovery",
                 danger_score=0.0,
                 direction=0.0,
+                velocity=compute_escape_velocity("recovery", 0.0, self.config),
                 drives=compute_escape_drives("recovery", 0.0, self.config),
                 stability_score=stability_score,
                 unstable=True,
@@ -220,12 +254,14 @@ class EscapeController:
             dragonfly_state,
             centered_side_threshold=self.config.centered_side_threshold,
         )
+        velocity = compute_escape_velocity(mode, direction, self.config)
         drives = compute_escape_drives(mode, direction, self.config)
 
         decision = EscapeDecision(
             mode=mode,
             danger_score=danger_score,
             direction=direction,
+            velocity=velocity,
             drives=drives,
             stability_score=stability_score,
             unstable=False,

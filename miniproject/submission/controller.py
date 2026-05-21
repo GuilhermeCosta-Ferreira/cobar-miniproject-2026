@@ -16,7 +16,7 @@ from .olfaction import Olfaction
 from .vision import (
     Vision,
 )
-from .threat import DragonflyAttackDetector, EscapeController
+from .threat import DEFAULT_DRAGONFLY_STATE, DragonflyAttackDetector, EscapeController
 
 MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
 
@@ -49,19 +49,14 @@ class Controller:
         self.dragonfly_escape_direction = 0.0
         self.stability_score = 1.0
         self.is_unstable = False
-        self.dragonfly_detector = DragonflyAttackDetector(
-            visible_threshold=0.0003,
-            visible_blob_threshold=0.0005,
-            attack_threshold=0.004,
-            blob_threshold=0.001,
-            looming_threshold=0.00025,
-            watch_hold_steps=int(1.5 / sim.timestep),
-            hold_steps=int(0.35 / sim.timestep),
-            min_consecutive_hits=1,
-        )
+        self.dragonfly_detector = DragonflyAttackDetector.from_timestep(sim.timestep)
         self.escape_controller = EscapeController()
+        self.current_escape_decision = self.escape_controller.last_decision
 
         self.current_drive = [0.0, 0.0]
+        self.current_velocity = np.array([0.0, 0.0])
+        self.wind_velocity = np.array([0.0, 0.0])
+        self.obstacle_velocity = np.array([0.0, 0.0])
         self.inverse_model = load(MODEL_PATH)
 
         self._velocity_history: list = []
@@ -94,28 +89,30 @@ class Controller:
         odor_velocity = self.olfaction.smell_to_velocity(smell)
 
         # WIND
-        """
+        wind_velocity = np.array([0.0, 0.0])
         if sim.enable_wind:
             wind = sim.get_antenna_data(sim.fly.name)
-            wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
-            wind_signal = adapt_drives(wind_signal, max_signal = 0.5)
+            wind_signal = self.wind.process_wind(
+                wind,
+                bias=0,
+                lat_k=0.7,
+                fwd_k=0.5,
+            )
+            wind_velocity = wind_signal_to_velocity(wind_signal)
         else:
-            wind_signal = np.array([0.0, 0.0])
-        """
+            self.wind.current_signal = np.array([0.0, 0.0])
+        self.wind_velocity = wind_velocity
 
         # VISION
         vision_velocity = np.array([0.0, 0.0])
         if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
             vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
-
-        velocity = odor_velocity + vision_velocity
-        self._velocity_history.append(velocity)
-
-        drives = self.inverse_model.predict(np.array([velocity]))[0]
-        self._drive_history.append(drives)
+        else:
+            self.vision.current_signal = vision_velocity
+        self.obstacle_velocity = vision_velocity
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
-        """
+        dragonfly_state = DEFAULT_DRAGONFLY_STATE.copy()
         dragonfly_state = self.dragonfly_detector.detect_state_from_raw_vision(
             raw_vision=sim.get_raw_vision(sim.fly.name),
             current_step=current_step,
@@ -132,6 +129,7 @@ class Controller:
         )
 
         escape_decision = self.escape_controller.step(sim, dragonfly_state)
+        self.current_escape_decision = escape_decision
         self.dragonfly_mode = escape_decision.mode
         self.dragonfly_danger_score = escape_decision.danger_score
         self.dragonfly_escape_direction = escape_decision.direction
@@ -139,21 +137,28 @@ class Controller:
         self.is_unstable = escape_decision.unstable
 
         if escape_decision.mode == "recovery":
-            control_signals = (escape_decision.drives + drives)
-            control_signals = adapt_drives(control_signals, max_signal=1.0)
-        elif escape_decision.mode != "normal":
-            # During dragonfly danger, odor pursuit is suppressed so the fly does
-            # not turn away from a visible threat just to follow the banana plume.
-            control_signals = (escape_decision.drives + drives)
-            max_signal = 2.3 if escape_decision.mode == "panic_escape" else 1.6
-            control_signals = keep_escape_drives_forward(
-                control_signals,
-                escape_decision.mode,
+            velocity = escape_decision.velocity
+        elif escape_decision.mode in ("planned_escape", "panic_escape"):
+            # Odor pursuit is suppressed during danger, but obstacle avoidance and
+            # wind compensation still shape the escape vector.
+            velocity = (
+                escape_decision.velocity
+                + 0.8 * vision_velocity
+                + 0.5 * wind_velocity
             )
-            control_signals = adapt_drives(control_signals, max_signal=max_signal)
+            max_forward = 20.0 if escape_decision.mode == "panic_escape" else 15.0
+            max_turn = 2.5 if escape_decision.mode == "panic_escape" else 3.5
+            velocity = adapt_velocity(velocity, max_forward=max_forward, max_turn=max_turn)
         else:
-            control_signals = drives
-        """
+            velocity = odor_velocity + vision_velocity + wind_velocity
+            velocity = adapt_velocity(velocity, max_forward=15.0, max_turn=6.0)
+
+        self.current_velocity = velocity
+        self._velocity_history.append(velocity)
+
+        drives = self.inverse_model.predict(np.array([velocity]))[0]
+        self.current_drive = drives
+        self._drive_history.append(drives)
 
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
         return joint_angles, adhesion
@@ -184,3 +189,30 @@ def keep_escape_drives_forward(drives: np.ndarray, mode: str) -> np.ndarray:
     min_drive = min_drive_by_mode.get(mode, 0.0)
 
     return np.maximum(drives, min_drive)
+
+
+def adapt_velocity(
+    velocity: np.ndarray,
+    max_forward: float = 15.0,
+    max_turn: float = 6.0,
+) -> np.ndarray:
+    velocity = np.asarray(velocity, dtype=float)
+    return np.array(
+        [
+            np.clip(velocity[0], -0.5 * max_forward, max_forward),
+            np.clip(velocity[1], -max_turn, max_turn),
+        ],
+        dtype=float,
+    )
+
+
+def wind_signal_to_velocity(
+    wind_signal: np.ndarray,
+    forward_gain: float = 2.0,
+    turn_gain: float = 1.2,
+) -> np.ndarray:
+    wind_signal = np.asarray(wind_signal, dtype=float)
+    forward_velocity = forward_gain * np.mean(wind_signal)
+    rotational_velocity = turn_gain * (wind_signal[1] - wind_signal[0])
+
+    return np.array([forward_velocity, rotational_velocity], dtype=float)

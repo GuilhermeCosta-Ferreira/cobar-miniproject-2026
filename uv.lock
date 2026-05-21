@@ -333,6 +333,7 @@ dependencies = [
     { name = "jaxtyping" },
     { name = "joblib" },
     { name = "matplotlib" },
+    { name = "matplotlib-tufte" },
     { name = "mediapy" },
     { name = "mujoco" },
     { name = "numba" },
@@ -372,6 +373,7 @@ requires-dist = [
     { name = "jaxtyping", specifier = "==0.3.7" },
     { name = "joblib", specifier = ">=1.5.3" },
     { name = "matplotlib", specifier = ">=3.10,<4.0" },
+    { name = "matplotlib-tufte", specifier = ">=1.1.1,<2.0" },
     { name = "mediapy", specifier = ">=1.2,<3.0" },
     { name = "mujoco", specifier = ">=3.5,<3.6" },
     { name = "mujoco-warp", marker = "extra == 'warp'", specifier = ">=3.5,<3.6" },
@@ -837,6 +839,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c7/74/97e72a36efd4ae2bccb3463284300f8953f199b5ffbc04cbbb0ec78f74b1/matplotlib_inline-0.2.1.tar.gz", hash = "sha256:e1ee949c340d771fc39e241ea75683deb94762c8fa5f2927ec57c83c4dffa9fe", size = 8110, upload-time = "2025-10-23T09:00:22.126Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/33/ee4519fa02ed11a94aef9559552f3b17bb863f2ecfe1a35dc7f548cde231/matplotlib_inline-0.2.1-py3-none-any.whl", hash = "sha256:d56ce5156ba6085e00a9d54fead6ed29a9c47e215cd1bba2e976ef39f5710a76", size = 9516, upload-time = "2025-10-23T09:00:20.675Z" },
+]
+
+[[package]]
+name = "matplotlib-tufte"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/67/82/4f3e3192da688c86b540aef89fcee3d434d300f90b4d70d9e3e7ab3c7a2e/matplotlib_tufte-1.1.1.tar.gz", hash = "sha256:736277d14a3c3845eecca3737f884d99e752bef605325839275fd55aeacdb008", size = 8425, upload-time = "2023-07-31T08:46:25.497Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4b/7c/9eeb92d81ef963eb354a75f03bb31228f5fe5d990bda946f62ebcaec790b/matplotlib_tufte-1.1.1-py3-none-any.whl", hash = "sha256:5e16a9aae52659ebd72d7505285a67feca0f8e321e07184787f95dc86f1e63d6", size = 17341, upload-time = "2023-07-31T08:46:23.991Z" },
 ]
 
 [[package]]
