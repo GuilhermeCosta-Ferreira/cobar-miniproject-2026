@@ -41,6 +41,8 @@ dependencies = [
     "torch>=2.10.0",
     "opencv-python>=4.13.0.92",
     "pygame>=2.6.1",
+    "matplotlib-tufte",
+    "seaborn>=0.13.2",
 ]
 
 [project.optional-dependencies]
@@ -69,6 +71,9 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 flygym = ["assets/**"]
+
+[tool.uv.sources]
+matplotlib-tufte = { git = "https://github.com/ninivert/matplotlib_tufte.git" }
 
 [dependency-groups]
 dev = [

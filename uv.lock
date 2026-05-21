@@ -333,6 +333,7 @@ dependencies = [
     { name = "jaxtyping" },
     { name = "joblib" },
     { name = "matplotlib" },
+    { name = "matplotlib-tufte" },
     { name = "mediapy" },
     { name = "mujoco" },
     { name = "numba" },
@@ -342,6 +343,7 @@ dependencies = [
     { name = "pygame" },
     { name = "pyyaml" },
     { name = "scikit-learn" },
+    { name = "seaborn" },
     { name = "tabulate" },
     { name = "torch" },
 ]
@@ -372,6 +374,7 @@ requires-dist = [
     { name = "jaxtyping", specifier = "==0.3.7" },
     { name = "joblib", specifier = ">=1.5.3" },
     { name = "matplotlib", specifier = ">=3.10,<4.0" },
+    { name = "matplotlib-tufte", git = "https://github.com/ninivert/matplotlib_tufte.git" },
     { name = "mediapy", specifier = ">=1.2,<3.0" },
     { name = "mujoco", specifier = ">=3.5,<3.6" },
     { name = "mujoco-warp", marker = "extra == 'warp'", specifier = ">=3.5,<3.6" },
@@ -384,6 +387,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0,<10.0" },
     { name = "pyyaml", specifier = ">=6.0,<7.0" },
     { name = "scikit-learn", specifier = ">=1.8.0" },
+    { name = "seaborn", specifier = ">=0.13.2" },
     { name = "tabulate", specifier = "==0.9.0" },
     { name = "torch", specifier = ">=2.10.0" },
     { name = "warp-lang", marker = "extra == 'warp'", specifier = ">=1.11,<1.12" },
@@ -837,6 +841,14 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c7/74/97e72a36efd4ae2bccb3463284300f8953f199b5ffbc04cbbb0ec78f74b1/matplotlib_inline-0.2.1.tar.gz", hash = "sha256:e1ee949c340d771fc39e241ea75683deb94762c8fa5f2927ec57c83c4dffa9fe", size = 8110, upload-time = "2025-10-23T09:00:22.126Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/33/ee4519fa02ed11a94aef9559552f3b17bb863f2ecfe1a35dc7f548cde231/matplotlib_inline-0.2.1-py3-none-any.whl", hash = "sha256:d56ce5156ba6085e00a9d54fead6ed29a9c47e215cd1bba2e976ef39f5710a76", size = 9516, upload-time = "2025-10-23T09:00:20.675Z" },
+]
+
+[[package]]
+name = "matplotlib-tufte"
+version = "0.2.1"
+source = { git = "https://github.com/ninivert/matplotlib_tufte.git#7247f2cca514fbab8a82ef2c5d54d776790e2fc5" }
+dependencies = [
+    { name = "matplotlib" },
 ]
 
 [[package]]
@@ -1520,6 +1532,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/81/61/0470810c8a093cdacd4ba7504b8a218fd49ca070d79eca23a615f5d9a0b0/scipy-1.17.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:0cf46c8013fec9d3694dc572f0b54100c28405d55d3e2cb15e2895b25057996e", size = 37405953, upload-time = "2026-01-10T21:26:07.75Z" },
     { url = "https://files.pythonhosted.org/packages/92/ce/672ed546f96d5d41ae78c4b9b02006cedd0b3d6f2bf5bb76ea455c320c28/scipy-1.17.0-cp312-cp312-win_amd64.whl", hash = "sha256:0937a0b0d8d593a198cededd4c439a0ea216a3f36653901ea1f3e4be949056f8", size = 36328121, upload-time = "2026-01-10T21:26:16.509Z" },
     { url = "https://files.pythonhosted.org/packages/9d/21/38165845392cae67b61843a52c6455d47d0cc2a40dd495c89f4362944654/scipy-1.17.0-cp312-cp312-win_arm64.whl", hash = "sha256:f603d8a5518c7426414d1d8f82e253e454471de682ce5e39c29adb0df1efb86b", size = 24314368, upload-time = "2026-01-10T21:26:23.087Z" },
+]
+
+[[package]]
+name = "seaborn"
+version = "0.13.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "pandas" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/86/59/a451d7420a77ab0b98f7affa3a1d78a313d2f7281a57afb1a34bae8ab412/seaborn-0.13.2.tar.gz", hash = "sha256:93e60a40988f4d65e9f4885df477e2fdaff6b73a9ded434c1ab356dd57eefff7", size = 1457696, upload-time = "2024-01-25T13:21:52.551Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/83/11/00d3c3dfc25ad54e731d91449895a79e4bf2384dc3ac01809010ba88f6d5/seaborn-0.13.2-py3-none-any.whl", hash = "sha256:636f8336facf092165e27924f223d3c62ca560b1f2bb5dff7ab7fad265361987", size = 294914, upload-time = "2024-01-25T13:21:49.598Z" },
 ]
 
 [[package]]
