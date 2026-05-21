@@ -1,0 +1,11 @@
+simulation:
+  seed: 42
+  n_steps: 20000
+
+controller:
+  base_vf: 10
+  max_vt: 7
+  dropoff_vt: 5
+
+olfaction:
+  gain: 3
