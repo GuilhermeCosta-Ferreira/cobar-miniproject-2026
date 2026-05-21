@@ -15,7 +15,7 @@ from .quaternions import (
     quat_rotate,
 )
 
-_PARAMS_PATH = pathlib.Path(__file__).parent.parent / "params" / "wind_fit_params.csv"
+_PARAMS_PATH = pathlib.Path(__file__).parent.parent / "periphery" / "params" / "wind_fit_params.csv"
 
 
 def _load_fit_params(path: pathlib.Path) -> types.SimpleNamespace:
@@ -90,7 +90,7 @@ class Wind:
         r_magnitude = np.sqrt(scale_corrected_data[2]**2 + scale_corrected_data[3]**2)
         estimated_magnitude = (l_magnitude + r_magnitude) / 2  # Average of both antennas
         return estimated_magnitude
-    
+
     def _correct_phase(self, qpos_processed: list) -> list[np.ndarray]:
         # This step might not be needed
         pass
@@ -126,7 +126,7 @@ class Wind:
             np.ndarray: Shape (2,) array of [left_drive, right_drive].
         """
         drive_angle = wind_angle + np.pi  # Invert angle to turn toward the wind
-        forward_component = fwd_k * np.cos(drive_angle) * np.ones(2)  
+        forward_component = fwd_k * np.cos(drive_angle) * np.ones(2)
         lateral_component = lat_k * np.sin(drive_angle)
         if lateral_component > 0:
             lateral_component_v = np.array([lateral_component, 0])
@@ -136,9 +136,9 @@ class Wind:
         control_signal = forward_component + lateral_component_v
 
         self.add_signal(control_signal)
-        
+
         return control_signal
-    
+
     def _post_process_angle(self, angle: np.ndarray, alpha: float, window: int = 50) -> np.ndarray:
         """Filter raw control signal to smooth out noise and make it more suitable for driving the fly's actuators."""
         if len(self.estimated_wind_angles) < window:

@@ -5,7 +5,7 @@ import cv2
 
 import numpy as np
 
-from ...world import timer, print_timings
+from ...periphery import timer, print_timings
 from .convert import convert_to_hsv_fast
 from .utils import hue_to_degree, get_hsv_values
 

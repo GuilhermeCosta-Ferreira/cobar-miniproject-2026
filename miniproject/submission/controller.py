@@ -18,7 +18,7 @@ from .vision import (
 )
 from .threat import DragonflyAttackDetector, EscapeController
 
-MODEL_PATH = Path(__file__).resolve().parent / "" / "models" / "turning_inverse_model.joblib"
+MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
 
 
 # ================================================================
@@ -60,10 +60,32 @@ class Controller:
             min_consecutive_hits=1,
         )
         self.escape_controller = EscapeController()
+
         self.current_drive = [0.0, 0.0]
         self.inverse_model = load(MODEL_PATH)
 
+        self._velocity_history: list = []
+        self._drive_history: list = []
 
+
+
+
+    # ================================================================
+    # 2. Section: Properties
+    # ================================================================
+    @property
+    def velocity_hist(self):
+        return np.asarray(self._velocity_history)
+
+    @property
+    def drive_hist(self):
+        return np.asarray(self._drive_history)
+
+
+
+    # ================================================================
+    # 3. Section: Methods
+    # ================================================================
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
 
@@ -82,21 +104,18 @@ class Controller:
         """
 
         # VISION
-        vision_signal = np.array([0.0, 0.0])
+        vision_velocity = np.array([0.0, 0.0])
         if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
-            frame = produce_human_view(sim)
-            vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
+            vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
 
-            self.vision.add_signal(vision_signal)
+        velocity = odor_velocity + vision_velocity
+        self._velocity_history.append(velocity)
 
-        """
-        # UPDATE THIS
-        control_signals = odor_drives + vision_signal + wind_signal
-        control_signals = adapt_drives(control_signals)
-        """
-        self.vision_signal = vision_signal
+        drives = self.inverse_model.predict(np.array([velocity]))[0]
+        self._drive_history.append(drives)
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
+        """
         dragonfly_state = self.dragonfly_detector.detect_state_from_raw_vision(
             raw_vision=sim.get_raw_vision(sim.fly.name),
             current_step=current_step,
@@ -120,20 +139,12 @@ class Controller:
         self.is_unstable = escape_decision.unstable
 
         if escape_decision.mode == "recovery":
-            control_signals = (
-                escape_decision.drives
-                + vision_signal
-                + 0.5 * wind_signal
-            )
+            control_signals = (escape_decision.drives + drives)
             control_signals = adapt_drives(control_signals, max_signal=1.0)
         elif escape_decision.mode != "normal":
             # During dragonfly danger, odor pursuit is suppressed so the fly does
             # not turn away from a visible threat just to follow the banana plume.
-            control_signals = (
-                escape_decision.drives
-                + vision_signal
-                + 0.5 * wind_signal
-            )
+            control_signals = (escape_decision.drives + drives)
             max_signal = 2.3 if escape_decision.mode == "panic_escape" else 1.6
             control_signals = keep_escape_drives_forward(
                 control_signals,
@@ -141,11 +152,8 @@ class Controller:
             )
             control_signals = adapt_drives(control_signals, max_signal=max_signal)
         else:
-            control_signals = odor_drives + vision_signal + wind_signal
-            control_signals = adapt_drives(control_signals)
-
-        drives = self.inverse_model.predict(np.array([odor_velocity]))[0]
-        self.current_drive = drives
+            control_signals = drives
+        """
 
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
         return joint_angles, adhesion

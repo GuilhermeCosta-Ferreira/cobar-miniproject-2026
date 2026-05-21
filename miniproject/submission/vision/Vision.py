@@ -111,23 +111,3 @@ class Vision:
         self._velocity_history.append(self.vision_smooth)
 
         return self.vision_smooth
-
-        return float(np.sum(self.signal_history))
-
-    def add_signal(self, signal: np.ndarray) -> None:
-        self.signal_history.append(signal)
-        self.current_signal = signal
-
-        if self.history_size > self.max_size:
-            self.signal_history.pop(0)
-
-    def update_dragonfly_state(self, score: float, attack: bool) -> None:
-        self.current_dragonfly_score = float(score)
-        self.current_dragonfly_attack = bool(attack)
-
-    @property
-    def is_active(self) -> bool:
-        if self.history_size == self.max_size:
-            return self.history_sum > 0
-
-        return False

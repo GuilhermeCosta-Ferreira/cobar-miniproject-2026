@@ -208,7 +208,7 @@ if __name__ == "__main__":
     for target, actual in zip(target_vf_vr, actual_vf_vr.mean(axis=-2)):
         print(f"  {target} → [{actual[0]:.2f}, {actual[1]:.2f}]")
 
-    MODEL_PATH = Path("models/turning_inverse_model_flat.joblib")
+    MODEL_PATH = Path("periphery/models/turning_inverse_model_flat.joblib")
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     dump(model, MODEL_PATH)
