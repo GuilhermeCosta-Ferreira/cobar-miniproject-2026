@@ -20,8 +20,10 @@ from submission.world import SEEDS
 # 1. Section: INPUTS
 # ================================================================
 MAX_NUM_STEPS: int = 100_000
-LEVELS: list[int] = [1, 2, 3, 4]
-RESULTS_FOLDER: Path = Path("eval")
+LEVEL: int = 2
+VISION_GAIN: list[float] = [1.5, 2, 2.5, 3, 4, 5]
+#VISION_GAIN: list[float] = [1]
+RESULTS_FOLDER: Path = Path("grid_results")
 
 
 
@@ -34,6 +36,14 @@ def got_to_food(sim: MiniprojectSimulation) -> bool:
     dist = np.sqrt(np.sum((fly_xy - banana_xy) ** 2))
     return dist <= 3
 
+def fell(sim: MiniprojectSimulation) -> bool:
+    fly_body = sim.get_body_positions(sim.fly.name)[0][2]
+    leg_pos = sim.get_body_positions(sim.fly.name)[-1][2]
+    if fly_body < leg_pos:
+        return True
+    return False
+
+
 
 
 # ================================================================
@@ -42,16 +52,25 @@ def got_to_food(sim: MiniprojectSimulation) -> bool:
 if __name__ == "__main__":
     os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
-    for level in LEVELS:
+    for gain in VISION_GAIN:
         success_rate = {}
         for seed in SEEDS:
-            sim = MiniprojectSimulation(level, seed)
-            controller = Controller(sim)
+            sim = MiniprojectSimulation(LEVEL, seed)
+            controller = Controller(sim, vision_gain=gain)
 
+            fell_count = 0
             for step in tqdm.tqdm(range(MAX_NUM_STEPS)):
                 if got_to_food(sim):
                     print(f"Got to goal in {step} timesteps.")
                     success_rate[seed] = step
+                    break
+
+                if fell(sim):
+                    fell_count += 1
+
+                if fell_count > 1000:
+                    print("Fly fell")
+                    success_rate[seed] = -1
                     break
 
                 joint_angles, adhesion_signals = controller.step(sim)
@@ -63,7 +82,7 @@ if __name__ == "__main__":
                 print("Took too long")
                 success_rate[seed] = -1
 
-        output_path = RESULTS_FOLDER / f"sucess_rates_level_{level}.json"
+        output_path = RESULTS_FOLDER / f"sucess_rates_vision_gain_{gain}_negative_signal.json"
         with open(output_path, "w") as f:
             json.dump(success_rate, f, indent=4)
 

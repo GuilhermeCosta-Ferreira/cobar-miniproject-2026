@@ -20,10 +20,8 @@ from submission.world import SEEDS
 # 1. Section: INPUTS
 # ================================================================
 MAX_NUM_STEPS: int = 100_000
-LEVEL: int = 2
-VISION_GAIN: list[float] = [1.5, 2, 2.5, 3, 4, 5]
-#VISION_GAIN: list[float] = [1]
-RESULTS_FOLDER: Path = Path("grid_results")
+LEVELS: list[int] = [1, 2, 3, 4]
+RESULTS_FOLDER: Path = Path("eval")
 
 
 
@@ -45,18 +43,17 @@ def fell(sim: MiniprojectSimulation) -> bool:
 
 
 
-
 # ================================================================
 # 3. Section: MAIN
 # ================================================================
 if __name__ == "__main__":
     os.makedirs(RESULTS_FOLDER, exist_ok=True)
 
-    for gain in VISION_GAIN:
+    for level in LEVELS:
         success_rate = {}
         for seed in SEEDS:
-            sim = MiniprojectSimulation(LEVEL, seed)
-            controller = Controller(sim, vision_gain=gain)
+            sim = MiniprojectSimulation(level, seed)
+            controller = Controller(sim)
 
             fell_count = 0
             for step in tqdm.tqdm(range(MAX_NUM_STEPS)):
@@ -82,7 +79,7 @@ if __name__ == "__main__":
                 print("Took too long")
                 success_rate[seed] = -1
 
-        output_path = RESULTS_FOLDER / f"sucess_rates_vision_gain_{gain}_negative_signal.json"
+        output_path = RESULTS_FOLDER / f"sucess_rates_level_{level}.json"
         with open(output_path, "w") as f:
             json.dump(success_rate, f, indent=4)
 
