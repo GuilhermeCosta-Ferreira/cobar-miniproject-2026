@@ -3,6 +3,9 @@
 # ================================================================
 import numpy as np
 
+from pathlib import Path
+from joblib import load
+
 from miniproject.simulation import MiniprojectSimulation
 from .hybrid_controller import HybridTurningController
 
@@ -20,6 +23,9 @@ from .vision import (
     Vision,
     DragonflyAttackDetector
 )
+
+MODEL_PATH = Path(__file__).resolve().parent / "models" / "turning_inverse_model.joblib"
+
 
 # ================================================================
 # 1. Section: Controler Class
@@ -43,6 +49,7 @@ class Controller:
             min_consecutive_hits=1,
         )
         self.current_drive = [0.0, 0.0]
+        self.inverse_model = load(MODEL_PATH)
 
 
     def step(self, sim: MiniprojectSimulation):
@@ -54,6 +61,9 @@ class Controller:
         lateral_olfaction = average_olfaction_signal(smooth_olfaction)
         odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
         self.olfaction.current_signal = odor_drives
+        if(current_step % 10000 == 0):
+            print(f"Lateral olfaction: {lateral_olfaction}")
+            print(f"Odor Drives: {odor_drives}")
 
         # WIND
         if sim.enable_wind:
