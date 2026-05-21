@@ -61,8 +61,11 @@ class Wind:
         self.fit_params = _load_fit_params(_PARAMS_PATH)
         self.wind_signal = []
         self.estimated_wind_angles = []
+        self.norm_qpos_history = []
         self.current_signal = None
         self.current_estimated_wind_angle = None
+        # Warm-up gate: the antenna starts from rest at simulation start and needs
+        # ~400 steps to settle before the arctan2 estimate is reliable.
 
     def add_signal(self, signal: np.ndarray) -> None:
         """Store the generated control signal in the `wind_signal` property.
@@ -75,6 +78,10 @@ class Wind:
         Args:
             angle: (float) Estimated wind angle in radians."""
         self.estimated_wind_angles.append(angle)
+
+    def add_norm_qpos_history(self, qpos: list[np.ndarray]) -> None:
+        """Store the scale-corrected antenna qpos in the `norm_qpos_history` property for smoothing."""
+        self.norm_qpos_history.append(qpos)
 
     def _correct_scale_and_bias(self, antenna_data: list[np.ndarray]) -> list[np.ndarray]:
         """Apply the fit correction to each antenna's signals. Brings f = k * magnitude * sin(theta + phi) + bias to the form f = magnitude * sin(theta + phi)."""
@@ -96,11 +103,22 @@ class Wind:
         pass
 
     def _compute_angle(self, scale_corrected_data: list[np.ndarray]) -> float:
-        l_angle = np.arctan2(scale_corrected_data[1], scale_corrected_data[0])  # atan2(qy, qx)
-        r_angle = np.arctan2(scale_corrected_data[3], scale_corrected_data[2])  # atan2(qy, qx)
-        estimated_angle = (l_angle + r_angle) / 2  # Average of both antennas
+        l_angle = np.arctan2(scale_corrected_data[0], scale_corrected_data[1])  # atan2(qx, qy)
+        r_angle = np.arctan2(scale_corrected_data[2], scale_corrected_data[3])  # atan2(qx, qy)
+        # Circular mean: arithmetic average breaks at the ±π discontinuity when the
+        # two antennas land on opposite sides (e.g. +173° and -172° average to 0°).
+        estimated_angle = np.angle(np.exp(1j * l_angle) + np.exp(1j * r_angle))
         self.current_estimated_wind_angle = estimated_angle
         return estimated_angle
+    
+    def _smooth_signals(self, signal: list[np.ndarray], win: int = 200) -> list[np.ndarray]:
+        """Apply exponential smoothing to the corrected antenna signals."""
+        if len(self.norm_qpos_history) < win - 1:
+            return signal
+        else:
+            win_signals = np.array(self.norm_qpos_history[-(win - 1):] + [signal])  # Shape (win, 4)
+            smoothed_signal = np.mean(win_signals, axis=0)  # Shape (4,)
+            return smoothed_signal
 
     def _generate_control_signal(
         self,
@@ -139,16 +157,6 @@ class Wind:
         
         return control_signal
     
-    def _post_process_angle(self, angle: np.ndarray, alpha: float, window: int = 50) -> np.ndarray:
-        """Filter raw control signal to smooth out noise and make it more suitable for driving the fly's actuators."""
-        if len(self.estimated_wind_angles) < window:
-            return angle  # Not enough data to smooth yet
-        past_average = np.mean(self.estimated_wind_angles[-window:], axis=0)  # Average of the last window signals
-        if np.abs(angle - past_average) > np.pi / 6:  # If the new signal deviates >30º from before, consider the wind direction may have jumped
-            # If the signal is stable, update the estimated wind angle with a weighted average to smooth it (fluctuations may occur due to unstable movement)
-            angle = alpha * past_average + (1 - alpha) * angle  # Smooth it with a weighted average
-        return angle
-
     def process_wind(
         self,
         antenna_data: dict[str, dict[str, np.ndarray]],
@@ -168,9 +176,12 @@ class Wind:
         Returns:
             np.ndarray: Shape (2,) array of [left_drive, right_drive].
         """
+
         scaled_signals = self._correct_scale_and_bias(antenna_data)
-        angle = self._compute_angle(scaled_signals)
-        #angle = self._post_process_angle(angle, alpha=0.3)  # Smooth the angle signal
+        self.add_norm_qpos_history(scaled_signals)
+        smoothed_signals = self._smooth_signals(scaled_signals)
+        angle = self._compute_angle(smoothed_signals)
+        self.add_angle(angle)
         control_signal = self._generate_control_signal(angle, bias=bias, lat_k=lat_k, fwd_k=fwd_k)
         self.current_signal = control_signal
 
