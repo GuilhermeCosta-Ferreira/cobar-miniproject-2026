@@ -32,24 +32,7 @@ _correction_vectors = {
     "m": np.array([0, 0, 0, 0, 0, 0, 0]),
     "h": np.array([0, 0, 0, 0, 0, 0, 0]),
 }
-"""
-_correction_vectors = {
-    # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
-    # unit: radian
-    "f": np.array([-0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
-    "m": np.array([-0.015, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
-    "h": np.array([0, 0, 0, -0.02, 0, 0.01, -0.02]),
-}
-"""
-"""
-_correction_vectors = {
-    # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
-    # unit: radian
-    "f": np.array([0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
-    "m": np.array([0.0, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
-    "h": np.array([-0.02, 0, 0, -0.02, 0, 0.01, -0.02]),
-}
-"""
+
 _right_leg_inversion = [1, -1, -1, 1, -1, 1, 1]
 _stumbling_force_threshold = -1
 _correction_rates: dict[str, tuple[int, int]] = {"retraction": (800, 700), "stumbling": (2200, 1800)}
@@ -131,36 +114,8 @@ class HybridTurningController:
     def step(
         self, sim: MiniprojectSimulation, action: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray]:
-        """base_amp = 1.0
-        amp_gain = 0.3
-
-        left_amp = base_amp + amp_gain * action[0]
-        right_amp = base_amp + amp_gain * action[1]
-
-        left_amp = np.clip(left_amp, 0.1, 0.6)
-        right_amp = np.clip(right_amp, 0.1, 0.6)
-
-        amps = np.array([
-            left_amp, left_amp, left_amp,
-            right_amp, right_amp, right_amp,
-        ])
-        base_freq = 12.0
-        freq_gain = 3.0
-
-        left_freq = base_freq + freq_gain * action[0]
-        right_freq = base_freq + freq_gain * action[1]
-
-        left_freq = np.clip(left_freq, 3.0, 12.0)
-        right_freq = np.clip(right_freq, 3.0, 12.0)
-
-        freqs = np.array([
-            left_freq, left_freq, left_freq,
-            right_freq, right_freq, right_freq,
-        ])"""
-
         amps = np.repeat(np.abs(action[:, np.newaxis]), 3, axis=1).ravel()
         freqs = self.intrinsic_freqs.copy()
-        #print("MAX AMPS", np.max(amps), "MAX FREQ", np.max(freqs))
         freqs[:3] *= 1 if action[0] > 0 else -1
         freqs[3:] *= 1 if action[1] > 0 else -1
         self.cpg_network.intrinsic_amps = amps
@@ -210,7 +165,6 @@ class HybridTurningController:
                 self.cpg_network.curr_phases[i] % (2 * np.pi)
             )
             my_joints_angles += net_correction * self.correction_vectors[leg[1]]
-            #print(leg[1])
             joints_angles.append(my_joints_angles)
 
             # 4.5 Get adhesion on/off signal

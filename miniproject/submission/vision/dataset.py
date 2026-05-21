@@ -9,7 +9,7 @@ from tqdm import tqdm
 from flygym.compose import ActuatorType
 from miniproject.simulation import MiniprojectSimulation
 
-from ..world import SEEDS, SimpleController
+from ..periphery import SEEDS, SimpleController
 from ..controller import Controller
 from .visualize import produce_human_view
 

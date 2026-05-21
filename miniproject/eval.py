@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 from miniproject.simulation import MiniprojectSimulation
 from submission.controller import Controller
 from flygym.compose import ActuatorType
-from submission.world import SEEDS
+from submission.periphery import SEEDS
 
 
 

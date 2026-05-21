@@ -18,7 +18,7 @@ from .vision import (
     DragonflyAttackDetector
 )
 
-MODEL_PATH = Path(__file__).resolve().parent / "models" / "turning_inverse_model.joblib"
+MODEL_PATH = Path(__file__).resolve().parent / "" / "models" / "turning_inverse_model.joblib"
 
 
 
@@ -73,8 +73,6 @@ class Controller:
 
         # WIND
         """
-        lateral_olfaction = average_olfaction_signal(smooth_olfaction)
-        odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
         if sim.enable_wind:
             wind = sim.get_antenna_data(sim.fly.name)
             wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
