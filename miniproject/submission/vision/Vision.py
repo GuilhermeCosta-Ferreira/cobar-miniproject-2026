@@ -1,40 +1,121 @@
+# ================================================================
+# 0. Section: IMPORTS
+# ================================================================
 import numpy as np
 
+from dataclasses import dataclass, field
+from miniproject.simulation import MiniprojectSimulation
 
+from .visualize import produce_human_view
+from .hsv import get_hsv_mask_fast
+from .obstacles import get_obstacles_by_height_fast
+from .velocity import get_velocity_vector
+from .signal_processing import get_smooth_vision
+
+
+# ================================================================
+# 1. Section: Class
+# ================================================================
+@dataclass
 class Vision:
-    def __init__(self, max_size: int = 100):
-        self.signal_history: list[np.ndarray] = []
-        self.max_size = max_size
-        self.current_signal = [0.0, 0.0]
+    max_size: int = 100
+    vision_smooth: np.ndarray = field(default_factory=lambda: np.zeros(2))
+    alpha: float = 0.1
 
-        self.current_dragonfly_score: float = 0.0
-        self.current_dragonfly_attack: bool = False
+    target_hue: float = 120.0
+    tolerance_hue: float = 5.0
+    min_saturation: float = 0.3
+    min_value: float = 0.8
+    height_threshold: int = 200
+    turn_gain: float = 7
+
+    current_dragonfly_score: float = 0.0
+    current_dragonfly_attack: bool = False
+
+    _velocity_history: list = field(default_factory=list)
+    _centroid_history: list = field(default_factory=list)
+    _mask_history: list = field(default_factory=list)
+    _frame_history: list = field(default_factory=list)
+
+
+
+    # ================================================================
+    # 2. Section: Properties
+    # ================================================================
+    @property
+    def velocity_hist(self):
+        return np.asarray(self._velocity_history)
 
     @property
-    def history_size(self) -> int:
-        return len(self.signal_history)
+    def centroid_hist(self):
+        return np.asarray(self._centroid_history)
 
     @property
-    def history_sum(self) -> float:
-        if self.history_size == 0:
-            return 0.0
+    def mask_hist(self):
+        return np.asarray(self._mask_history)
 
-        return float(np.sum(self.signal_history))
+    @property
+    def frame_hist(self):
+        return np.asarray(self._frame_history)
 
-    def add_signal(self, signal: np.ndarray) -> None:
-        self.signal_history.append(signal)
-        self.current_signal = signal
+    @property
+    def is_active(self) -> bool:
+        last_few = self.velocity_hist[-100:]
+        return np.sum(last_few) != 0
 
-        if self.history_size > self.max_size:
-            self.signal_history.pop(0)
+
+
+    # ================================================================
+    # 3. Section: Methods
+    # ================================================================
+    def obstacle_to_velocity(
+        self,
+        sim: MiniprojectSimulation,
+        current_forward_vel: float,
+    ) -> np.ndarray:
+        step = sim._curr_step
+
+        # 1. Get the frame as concatenated eyes
+        frame = produce_human_view(sim)
+
+        # 2. Builds a hsv dependent mask (isolate bright leafs)
+        mask = get_hsv_mask_fast(
+            image = frame,
+            target_hue = self.target_hue,
+            tolerance_hue = self.tolerance_hue,
+            min_saturation = self.min_saturation,
+            min_value = self.min_value,
+        )
+
+        # 3. Extract the tall objects (x, y, height)
+        obstacle_centroids = get_obstacles_by_height_fast(
+            mask = mask,
+            height_threshold = self.height_threshold
+        )
+
+
+        if step % 5000 == 0:
+            self._frame_history.append(frame)
+            self._mask_history.append(mask)
+            closest_centroid = max(obstacle_centroids, key=lambda c: c[2]) if len(obstacle_centroids) != 0 else []
+            self._centroid_history.append(closest_centroid)
+
+        vision_velocity = get_velocity_vector(
+            current_forward_velocity = current_forward_vel,
+            image = frame,
+            centroids = obstacle_centroids,
+            scary_height = 300
+        )
+
+        self.vision_smooth = get_smooth_vision(self.vision_smooth, vision_velocity, self.alpha)
+
+        self._velocity_history.append(self.vision_smooth)
+
+        return self.vision_smooth
+
+
+
 
     def update_dragonfly_state(self, score: float, attack: bool) -> None:
         self.current_dragonfly_score = float(score)
         self.current_dragonfly_attack = bool(attack)
-
-    @property
-    def is_active(self) -> bool:
-        if self.history_size == self.max_size:
-            return self.history_sum > 0
-
-        return False

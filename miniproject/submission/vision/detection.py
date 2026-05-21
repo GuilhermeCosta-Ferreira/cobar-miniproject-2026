@@ -39,7 +39,7 @@ def obstacle_by_hue(
         min_value=min_value,
     )
 
-    # 2. Extract the tall objects (closer)
+    # 2. Extract the tall objects (x, y, height)
     obstacle_centroids = get_obstacles_by_height_fast(mask, height_threshold)
 
     # 3. Get the avoidance signals
