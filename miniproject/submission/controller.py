@@ -22,6 +22,7 @@ from .vision import (
     produce_human_view,
     visualize,
     Vision,
+    DragonflyAttackDetector
 )
 
 # ================================================================
@@ -34,13 +35,18 @@ class Controller:
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
         self.frames = []
+        self.vision_signal = np.array([0.0, 0.0])
+        self.dragonfly_detector = DragonflyAttackDetector(
+            attack_threshold=0.06,
+            hold_steps=10_000,
+            min_consecutive_hits=1,
+        )
 
 
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
 
         # OLFACTION
-        """
         olfaction = sim.get_olfaction(sim.fly.name)
         smooth_olfaction = self.olfaction.process_olfaction(olfaction)
         lateral_olfaction = average_olfaction_signal(smooth_olfaction)
@@ -54,18 +60,41 @@ class Controller:
         #wind_x = get_wind_velocity(wind)
 
         # VISION
-        vision_signal = np.array([0.0, 0.0])
-        if ((current_step > 5e3) and (current_step % 1e3)) or self.vision.is_active:
+        if sim.enable_grass:
             frame = produce_human_view(sim)
-            vision_signal = obstacle_by_hue(frame)
+            self.vision_signal = obstacle_by_hue(frame)
+            odor_turn = odor_drives[0] - odor_drives[1]
+            vision_turn = self.vision_signal[0] - self.vision_signal[1]
+            if odor_turn != 0 and vision_turn != 0:
+                if np.sign(odor_turn) != np.sign(vision_turn):
+                    self.vision_signal *= -1
+            self.vision.add_signal(self.vision_signal)
+        else:
+            self.vision_signal = np.array([0.0, 0.0])
 
-            self.vision.add_signal(vision_signal)
+        control_signals = odor_drives + self.vision_signal + wind_signal
 
-        # UPDATE THIS
-        #updated_olfaction = update_olfaction(lateral_olfactation, wind_x)
-        control_signals = odor_drives + vision_signal + wind_signal
+        if sim.enable_terrain:
+            drives = damp_drives_for_rough_terrain(control_signals)
+        else:
+            drives = np.clip(control_signals, 0.2, 1.3)
 
-        drives = damp_drives_for_rough_terrain(control_signals)
-        """
-        joint_angles, adhesion = self.turning_controller.step(sim)
+        joint_angles, adhesion = self.turning_controller.step(sim, drives)
+
+        # DRAGONDFLY
+        raw_vision = sim.get_raw_vision(sim.fly.name)
+
+        dragonfly_attack, red_score = self.dragonfly_detector.detect_from_raw_vision(
+            raw_vision=raw_vision,
+            current_step=current_step,
+        )
+
+        self.vision.update_dragonfly_state(
+            score=red_score,
+            attack=dragonfly_attack,
+        )
+
+        if dragonfly_attack:
+            adhesion = np.ones_like(adhesion)
+        
         return joint_angles, adhesion
