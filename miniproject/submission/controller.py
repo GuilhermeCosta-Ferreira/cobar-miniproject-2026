@@ -57,11 +57,8 @@ class Controller:
         current_step = sim._curr_step
 
         # OLFACTION
-        olfaction = sim.get_olfaction(sim.fly.name)
-        self.olfaction.process_olfaction(olfaction)
-        lat_olfaction = self.olfaction.average_olfaction_signal()
-        odor_velocity = self.olfaction.build_drive_vector(lat_olfaction, 10, 5, 5)
-        self.olfaction.current_signal = odor_velocity
+        smell = sim.get_olfaction(sim.fly.name)
+        odor_velocity = self.olfaction.smell_to_velocity(smell)
 
         drives = self.inverse_model.predict(np.array([odor_velocity]))[0]
 
