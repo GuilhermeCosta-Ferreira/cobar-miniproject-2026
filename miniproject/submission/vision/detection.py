@@ -3,6 +3,7 @@
 # ================================================================
 import numpy as np
 from matplotlib import pyplot as plt
+import cv2
 
 from pathlib import Path
 
@@ -160,6 +161,130 @@ def dragonfly_red_score_from_raw_vision(
     )
 
     return score, mask
+
+
+def dragonfly_red_scores_by_eye(
+    raw_vision: list[np.ndarray] | tuple[np.ndarray, ...],
+    r_min: float = 90,
+    dominance: float = 1.25,
+    red_minus_green_min: float = 20,
+) -> tuple[float, float, float]:
+    """
+    Compute red score for each eye separately.
+
+    Returns
+    -------
+    total_score:
+        Mean red score over all eye pixels.
+    left_score:
+        Red score in the first raw vision image.
+    right_score:
+        Red score in the second raw vision image.
+    """
+    if len(raw_vision) < 2:
+        total_score, _ = dragonfly_red_score_from_raw_vision(
+            raw_vision,
+            r_min=r_min,
+            dominance=dominance,
+            red_minus_green_min=red_minus_green_min,
+        )
+        return total_score, total_score, total_score
+
+    left_score, _ = red_score_from_rgb(
+        raw_vision[0],
+        r_min=r_min,
+        dominance=dominance,
+        red_minus_green_min=red_minus_green_min,
+    )
+    right_score, _ = red_score_from_rgb(
+        raw_vision[1],
+        r_min=r_min,
+        dominance=dominance,
+        red_minus_green_min=red_minus_green_min,
+    )
+    total_score = 0.5 * (left_score + right_score)
+
+    return total_score, left_score, right_score
+
+
+def dragonfly_red_features_from_raw_vision(
+    raw_vision: list[np.ndarray] | tuple[np.ndarray, ...],
+    r_min: float = 90,
+    dominance: float = 1.25,
+    red_minus_green_min: float = 60,
+    hsv_sat_min: int = 80,
+    hsv_val_min: int = 70,
+) -> dict[str, float]:
+    """
+    Extract red-head features from the fly's raw vision.
+
+    A total red fraction alone is noisy: the dragonfly can be visible as a tiny red
+    speck before it attacks. The largest connected red blob is a better attack cue
+    because it expands sharply when the red head approaches.
+    """
+    raw_panel = stack_raw_vision(raw_vision)
+    img = to_uint8_rgb(raw_panel)
+    rgb = img.astype(np.float32)
+
+    r = rgb[..., 0]
+    g = rgb[..., 1]
+    b = rgb[..., 2]
+    dominance_mask = (
+        (r > r_min)
+        & (r > dominance * g)
+        & (r > dominance * b)
+        & ((r - g) > red_minus_green_min)
+    )
+
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+    hue = hsv[..., 0]
+    sat = hsv[..., 1]
+    val = hsv[..., 2]
+    hsv_mask = ((hue <= 10) | (hue >= 170)) & (sat >= hsv_sat_min) & (val >= hsv_val_min)
+
+    mask = np.ascontiguousarray((dominance_mask | hsv_mask).astype(np.uint8))
+    n_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        mask,
+        connectivity=8,
+    )
+
+    panel_area = float(mask.shape[0] * mask.shape[1])
+    largest_blob_frac = 0.0
+    blob_x = 0.5
+    blob_y = 0.5
+    component_count = max(0, n_labels - 1)
+
+    if n_labels > 1:
+        areas = stats[1:, cv2.CC_STAT_AREA]
+        label_id = int(np.argmax(areas)) + 1
+        largest_blob_frac = float(stats[label_id, cv2.CC_STAT_AREA]) / panel_area
+        cx, cy = centroids[label_id]
+        blob_x = float(cx) / mask.shape[1]
+        blob_y = float(cy) / mask.shape[0]
+
+    if len(raw_vision) >= 2:
+        mid_col = mask.shape[1] // 2
+        left_score = float(mask[:, :mid_col].mean())
+        right_score = float(mask[:, mid_col:].mean())
+    else:
+        left_score = float(mask.mean())
+        right_score = left_score
+
+    score_sum = left_score + right_score
+    side_bias = 0.0 if score_sum == 0 else (right_score - left_score) / score_sum
+
+    return {
+        "red_score": float(mask.mean()),
+        "dominance_score": float(dominance_mask.mean()),
+        "hsv_red_score": float(hsv_mask.mean()),
+        "left_score": left_score,
+        "right_score": right_score,
+        "side_bias": float(side_bias),
+        "largest_blob_frac": largest_blob_frac,
+        "blob_x": blob_x,
+        "blob_y": blob_y,
+        "component_count": float(component_count),
+    }
 
 
 def detect_dragonfly_attack_from_raw_vision(
