@@ -14,7 +14,7 @@ from .olfaction import Olfaction
 from .vision import Vision
 from .threat import DragonflyAttackDetector, EscapeController
 
-MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat_1_2.joblib"
+MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
 
 
 
@@ -113,9 +113,11 @@ class Controller:
         self.inverse_model = load(MODEL_PATH)
 
         signal_20 = self.inverse_model.predict(np.array([np.array([20,0])]))[0]
+        signal_15 = self.inverse_model.predict(np.array([np.array([15,0])]))[0]
         signal_10 = self.inverse_model.predict(np.array([np.array([10,0])]))[0]
 
         print(f"Signal for 20 forward: {signal_20}")
+        print(f"Signal for 15 forward: {signal_15}")
         print(f"Signal for 10 forward: {signal_10}")
 
         self._velocity_history: list = []
