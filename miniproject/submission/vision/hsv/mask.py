@@ -77,10 +77,10 @@ def get_mask_fast(
 
 def get_hsv_mask_fast(
     image: np.ndarray,
-    target_hue: float,
-    tolerance_hue: float,
-    min_saturation: float,
-    min_value: float,
+    target_hue: float = 120,
+    tolerance_hue: float = 5,
+    min_saturation: float = 0.3,
+    min_value: float = 0.8,
 ) -> np.ndarray:
     """
     Fast HSV mask for uint8 RGB images.

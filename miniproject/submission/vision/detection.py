@@ -39,7 +39,7 @@ def obstacle_by_hue(
         min_value=min_value,
     )
 
-    # 2. Extract the tall objects (x, y, height)
+    # 2. Extract the tall objects (closer)
     obstacle_centroids = get_obstacles_by_height_fast(mask, height_threshold)
 
     # 3. Get the avoidance signals
@@ -220,9 +220,6 @@ def dragonfly_red_features_from_raw_vision(
     """
     Extract red-head features from the fly's raw vision.
 
-    A total red fraction alone is noisy: the dragonfly can be visible as a tiny red
-    speck before it attacks. The largest connected red blob is a better attack cue
-    because it expands sharply when the red head approaches.
     """
     raw_panel = stack_raw_vision(raw_vision)
     img = to_uint8_rgb(raw_panel)
@@ -244,7 +241,8 @@ def dragonfly_red_features_from_raw_vision(
     val = hsv[..., 2]
     hsv_mask = ((hue <= 10) | (hue >= 170)) & (sat >= hsv_sat_min) & (val >= hsv_val_min)
 
-    mask = np.ascontiguousarray((dominance_mask | hsv_mask).astype(np.uint8))
+    red_mask = dominance_mask | hsv_mask
+    mask = np.ascontiguousarray(red_mask.astype(np.uint8))
     n_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
         mask,
         connectivity=8,
