@@ -8,14 +8,13 @@ from joblib import load
 
 from miniproject.simulation import MiniprojectSimulation
 from .hybrid_controller import HybridTurningController
-from .config import load_config
 
 from .wind import Wind
 from .olfaction import Olfaction
 from .vision import Vision
 from .threat import DragonflyAttackDetector, EscapeController
 
-MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
+MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat_1_2.joblib"
 
 
 
