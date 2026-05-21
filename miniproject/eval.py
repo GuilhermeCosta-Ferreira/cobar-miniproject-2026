@@ -8,6 +8,7 @@ import json
 import numpy as np
 
 from pathlib import Path
+from joblib import Parallel, delayed
 
 from miniproject.simulation import MiniprojectSimulation
 from submission.controller import Controller
@@ -21,7 +22,7 @@ from submission.world import SEEDS
 # ================================================================
 MAX_NUM_STEPS: int = 100_000
 LEVELS: list[int] = [1, 2, 3, 4]
-RESULTS_FOLDER: Path = Path("eval")
+RESULTS_FOLDER: Path = Path("eval_test")
 
 
 
@@ -41,6 +42,35 @@ def fell(sim: MiniprojectSimulation) -> bool:
         return True
     return False
 
+def run_sim(level, seed, success_rate):
+    sim = MiniprojectSimulation(level, seed)
+    controller = Controller(sim)
+
+    fell_count = 0
+    for step in range(MAX_NUM_STEPS):
+        if got_to_food(sim):
+            print(f"Got to goal in {step} timesteps.")
+            success_rate[seed] = step
+            break
+
+        if fell(sim):
+            fell_count += 1
+
+        if fell_count > 1000:
+            print("Fly fell")
+            success_rate[seed] = -1
+            break
+
+        joint_angles, adhesion_signals = controller.step(sim)
+        sim.set_actuator_inputs(sim.fly.name, ActuatorType.POSITION, joint_angles)
+        sim.set_actuator_inputs(sim.fly.name, ActuatorType.ADHESION, adhesion_signals)
+        sim.step()
+    else:
+        print("Took too long")
+        success_rate[seed] = -1
+
+    return success_rate
+
 
 
 # ================================================================
@@ -51,33 +81,11 @@ if __name__ == "__main__":
 
     for level in LEVELS:
         success_rate = {}
-        for seed in SEEDS:
-            sim = MiniprojectSimulation(level, seed)
-            controller = Controller(sim)
 
-            fell_count = 0
-            for step in tqdm.tqdm(range(MAX_NUM_STEPS)):
-                if got_to_food(sim):
-                    print(f"Got to goal in {step} timesteps.")
-                    success_rate[seed] = step
-                    break
-
-                if fell(sim):
-                    fell_count += 1
-
-                if fell_count > 1000:
-                    print("Fly fell")
-                    success_rate[seed] = -1
-                    break
-
-                joint_angles, adhesion_signals = controller.step(sim)
-                sim.set_actuator_inputs(sim.fly.name, ActuatorType.POSITION, joint_angles)
-                sim.set_actuator_inputs(sim.fly.name, ActuatorType.ADHESION, adhesion_signals)
-                sim.step()
-
-            else:
-                print("Took too long")
-                success_rate[seed] = -1
+        success_rate = Parallel(n_jobs=-1)(
+            delayed(run_sim)(level, seed, success_rate)
+            for seed in tqdm.tqdm(SEEDS)
+        )
 
         output_path = RESULTS_FOLDER / f"sucess_rates_level_{level}.json"
         with open(output_path, "w") as f:
