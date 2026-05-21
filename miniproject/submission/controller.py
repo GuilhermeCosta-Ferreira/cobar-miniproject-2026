@@ -8,17 +8,15 @@ from joblib import load
 
 from miniproject.simulation import MiniprojectSimulation
 from .hybrid_controller import HybridTurningController
+from .config import load_config
 
-from .wind import (
-    Wind,
-)
+from .wind import Wind
 from .olfaction import Olfaction
-from .vision import (
-    Vision,
-)
+from .vision import Vision
 from .threat import DragonflyAttackDetector, EscapeController
 
 MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
+
 
 
 # ================================================================
@@ -28,16 +26,21 @@ class Controller:
     def __init__(
         self,
         sim: MiniprojectSimulation,
-        vision_gain: float = 1
+        config_path: Path,
     ):
+        config = load_config(config_path)
+
+        self.base_vf = config["controller"]["base_vf"]
+        self.max_vt = config["controller"]["max_vt"]
+        self.dropoff_vt = config["controller"]["dropoff_vt"]
+
+        self.olfaction_gain = config["olfaction"]["gain"]
+
         self.turning_controller = HybridTurningController(sim.timestep)
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
 
-        self.frames = []
-        self.vision_gain = vision_gain
-        self.vision_signal = np.array([0.0, 0.0])
         self.dragonfly_visible = False
         self.dragonfly_attack = False
         self.dragonfly_red_score = 0.0
@@ -88,10 +91,13 @@ class Controller:
     # ================================================================
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
+        current_vf = self.base_vf
 
         # OLFACTION
         smell = sim.get_olfaction(sim.fly.name)
-        odor_velocity = self.olfaction.smell_to_velocity(smell)
+        odor_velocity = self.olfaction.smell_to_velocity(
+            smell, current_vf, self.max_vt, self.olfaction_gain
+        )
 
         # WIND
         """
@@ -109,6 +115,11 @@ class Controller:
             vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
 
         velocity = odor_velocity + vision_velocity
+        velocity = drifter(
+            current_velocity = velocity,
+            dropoff_vt = self.dropoff_vt,
+            max_vt = self.max_vt
+        )
         self._velocity_history.append(velocity)
 
         drives = self.inverse_model.predict(np.array([velocity]))[0]
@@ -162,6 +173,31 @@ class Controller:
 # ──────────────────────────────────────────────────────
 # 1.1 Subsection: Helper Functions
 # ──────────────────────────────────────────────────────
+def drifter(
+    current_velocity: np.ndarray,
+    dropoff_vt: float,
+    max_vt: float,
+) -> np.ndarray:
+    current_vf = current_velocity[0]
+    current_vt = current_velocity[1]
+
+    vt_abs = abs(current_vt)
+
+    if max_vt <= dropoff_vt:
+        raise ValueError("max_vt must be larger than dropoff_vt.")
+
+    if vt_abs <= dropoff_vt:
+        vf_scale = 1.0
+    elif vt_abs >= max_vt:
+        vf_scale = 0.0
+    else:
+        vf_scale = 1.0 - (vt_abs - dropoff_vt) / (max_vt - dropoff_vt)
+
+    drifted_vf = current_vf * vf_scale
+
+    return np.array([drifted_vf, current_vt])
+
+
 def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
     drives = np.asarray(drives, dtype=float)
 

@@ -12,7 +12,7 @@ def get_velocity_vector(
     lat_olfaction: np.ndarray,
     forward_velocity: float,
     max_turn_velocity: float,
-    min_forward_velocity: float,
+    gain: float
 ) -> np.ndarray:
     """Builds a vector with forward and yaw rate"""
     mean_odor = lat_olfaction.mean()
@@ -21,13 +21,8 @@ def get_velocity_vector(
 
     rotational_velocity = 0.0
     if odor_bias != 0:
-        turn_command = np.tanh(3 * odor_bias)
+        turn_command = np.tanh(gain * odor_bias)
         rotational_velocity = max_turn_velocity * turn_command
-
-        # Slows down to avoid sharp turns
-        turn_strength = abs(turn_command)
-        forward_velocity = forward_velocity * (1.0 - 0.5 * turn_strength)
-        forward_velocity = max(forward_velocity, min_forward_velocity)
 
     velocity = np.array([forward_velocity, rotational_velocity])
     return velocity

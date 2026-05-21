@@ -22,10 +22,6 @@ class Olfaction:
     _intensity_hist: list = field(default_factory=list)
     _velocity_history: list = field(default_factory=list)
 
-    forward_velocity: float = 10.0
-    max_turn_velocity: float = 5.0
-    min_forward_velocity: float = 5.0
-
     # ================================================================
     # 2. Section: Properties
     # ================================================================
@@ -40,7 +36,9 @@ class Olfaction:
     # ================================================================
     # 3. Section: Methods
     # ================================================================
-    def smell_to_velocity(self, signal: np.ndarray) -> np.ndarray:
+    def smell_to_velocity(
+        self, signal: np.ndarray, current_vf: float, max_vt: float, gain: float
+    ) -> np.ndarray:
         # 1. Temporal smooths it to avoid big oscilations
         self.olfaction_smooth = get_smooth_olfaction(self.olfaction_smooth, signal, self.alpha)
 
@@ -50,10 +48,10 @@ class Olfaction:
 
         # 3. Converts into velocities
         odor_velocity = get_velocity_vector(
-            lat_olfaction,
-            self.forward_velocity,
-            self.max_turn_velocity,
-            self.min_forward_velocity,
+            lat_olfaction = lat_olfaction,
+            forward_velocity = current_vf,
+            max_turn_velocity = max_vt,
+            gain = gain
         )
         self._velocity_history.append(odor_velocity)
 

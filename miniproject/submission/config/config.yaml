@@ -8,4 +8,4 @@ controller:
   dropoff_vt: 5
 
 olfaction:
-  olfaction_gain: 3
+  gain: 3
