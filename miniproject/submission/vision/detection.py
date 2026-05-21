@@ -217,6 +217,7 @@ if __name__ == "__main__":
         signals = get_signals_from_centroids(
             obstacle_centroids,
             np.asarray(img.shape),
+            turn_gain=1
         )
 
         img = prepare_image_for_png(img)

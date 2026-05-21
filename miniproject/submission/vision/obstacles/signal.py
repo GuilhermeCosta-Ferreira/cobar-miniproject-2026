@@ -10,8 +10,8 @@ import numpy as np
 def get_signals_from_centroids(
     centroids: list[tuple[float, float, float]],
     image_shape: tuple[int, int, int] | np.ndarray,
-    turn_gain: float = 10,
-    min_signal: float = 0.0,
+    turn_gain: float = 7,
+    min_signal: float = 0,
     max_signal: float = 1.5,
     expected_max_height: float | None = None,
 ) -> np.ndarray:
@@ -38,8 +38,8 @@ def get_signals_from_centroids(
         height_weight = np.clip(height_weight, 0.0, 1.0)
 
         # Combined danger score
-        centrality_importance = 0.7
-        height_importance = 0.3
+        centrality_importance = 0.3
+        height_importance = 0.7
 
         risk = (
             centrality_importance * centrality
