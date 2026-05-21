@@ -24,12 +24,17 @@ from .vision import (
 # 1. Section: Controler Class
 # ================================================================
 class Controller:
-    def __init__(self, sim: MiniprojectSimulation):
+    def __init__(
+        self,
+        sim: MiniprojectSimulation,
+        vision_gain: float = 7
+    ):
         self.turning_controller = HybridTurningController(sim.timestep)
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
         self.frames = []
+        self.vision_gain = vision_gain
 
 
     def step(self, sim: MiniprojectSimulation):
@@ -52,9 +57,9 @@ class Controller:
 
         # VISION
         vision_signal = np.array([0.0, 0.0])
-        if ((current_step > 5e3) and (current_step % 1e3)) or self.vision.is_active:
+        if (current_step > 5e3) or self.vision.is_active:
             frame = produce_human_view(sim)
-            vision_signal = obstacle_by_hue(frame)
+            vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
 
             self.vision.add_signal(vision_signal)
 

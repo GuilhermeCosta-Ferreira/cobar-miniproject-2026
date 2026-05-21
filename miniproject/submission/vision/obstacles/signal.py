@@ -10,7 +10,7 @@ import numpy as np
 def get_signals_from_centroids(
     centroids: list[tuple[float, float, float]],
     image_shape: tuple[int, int, int] | np.ndarray,
-    turn_gain: float = 2,
+    turn_gain: float = 10,
     min_signal: float = 0.0,
     max_signal: float = 1.5,
     expected_max_height: float | None = None,
