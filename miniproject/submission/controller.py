@@ -26,10 +26,8 @@ class Controller:
     def __init__(
         self,
         sim: MiniprojectSimulation,
-        config_path: Path,
+        config: dict,
     ):
-        config = load_config(config_path)
-
         self.base_vf = config["controller"]["base_vf"]
         self.max_vt = config["controller"]["max_vt"]
         self.dropoff_vt = config["controller"]["dropoff_vt"]
