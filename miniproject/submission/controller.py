@@ -12,19 +12,14 @@ from .hybrid_controller import HybridTurningController
 from .wind import (
     Wind,
 )
-from .olfaction import (
-    average_olfaction_signal,
-    odor_intensity_to_control_signal,
-    Olfaction,
-)
+from .olfaction import Olfaction
 from .vision import (
-    obstacle_by_hue,
-    produce_human_view,
     Vision,
     DragonflyAttackDetector
 )
 
 MODEL_PATH = Path(__file__).resolve().parent / "models" / "turning_inverse_model.joblib"
+
 
 
 # ================================================================
@@ -34,16 +29,12 @@ class Controller:
     def __init__(
         self,
         sim: MiniprojectSimulation,
-        vision_gain: float = 1
     ):
         self.turning_controller = HybridTurningController(sim.timestep)
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
 
-        self.frames = []
-        self.vision_gain = vision_gain
-        self.vision_signal = np.array([0.0, 0.0])
         self.dragonfly_detector = DragonflyAttackDetector(
             attack_threshold=0.06,
             hold_steps=10_000,
@@ -52,7 +43,27 @@ class Controller:
         self.current_drive = [0.0, 0.0]
         self.inverse_model = load(MODEL_PATH)
 
+        self._velocity_history: list = []
+        self._drive_history: list = []
 
+
+
+    # ================================================================
+    # 2. Section: Properties
+    # ================================================================
+    @property
+    def velocity_hist(self):
+        return np.asarray(self._velocity_history)
+
+    @property
+    def drive_hist(self):
+        return np.asarray(self._drive_history)
+
+
+
+    # ================================================================
+    # 3. Section: Methods
+    # ================================================================
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
 
@@ -73,21 +84,15 @@ class Controller:
         """
 
         # VISION
-        vision_signal = np.array([0.0, 0.0])
+        vision_velocity = np.array([0.0, 0.0])
         if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
-            frame = produce_human_view(sim)
-            vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
+            vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
 
-            self.vision.add_signal(vision_signal)
+        velocity = odor_velocity + vision_velocity
+        self._velocity_history.append(velocity)
 
-        """
-        # UPDATE THIS
-        control_signals = odor_drives + vision_signal + wind_signal
-        control_signals = adapt_drives(control_signals)
-        """
-
-        drives = self.inverse_model.predict(np.array([odor_velocity]))[0]
-        self.current_drive = drives
+        drives = self.inverse_model.predict(np.array([velocity]))[0]
+        self._drive_history.append(drives)
 
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
         return joint_angles, adhesion
