@@ -25,12 +25,19 @@ _tripod_phase_biases = np.pi * np.array(
     ]
 )
 _tripod_coupling_weights = (_tripod_phase_biases > 0) * 10
-_correction_vectors = {
+"""_correction_vectors = {
     # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
     # unit: radian
     "f": np.array([-0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
     "m": np.array([-0.015, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
     "h": np.array([0, 0, 0, -0.02, 0, 0.01, -0.02]),
+}"""
+_correction_vectors = {
+    # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
+    # unit: radian
+    "f": np.array([0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
+    "m": np.array([0.0, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
+    "h": np.array([-0.02, 0, 0, -0.02, 0, 0.01, -0.02]),
 }
 _right_leg_inversion = [1, -1, -1, 1, -1, 1, 1]
 _stumbling_force_threshold = -1
@@ -69,7 +76,7 @@ class HybridTurningController:
     ):
         self.preprogrammed_steps = PreprogrammedSteps()
         self.intrinsic_freqs = intrinsic_freqs
-        self.timestep = timestep
+        self.timestep = 1e-4
         self.correction_rates = correction_rates
         self.stumbling_force_threshold = stumbling_force_threshold
         self.stumbling_correction = stumbling_correction
@@ -106,9 +113,51 @@ class HybridTurningController:
             seed=seed,
         )
 
-    def step(self, sim: MiniprojectSimulation) -> tuple[np.ndarray, np.ndarray]:
+        self.legs_diff_to_body = []
+        self.force_hist = {}
+        self.corrected_leg = []
+
+    def step(
+        self, sim: MiniprojectSimulation, action: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """base_amp = 1.0
+        amp_gain = 0.3
+
+        left_amp = base_amp + amp_gain * action[0]
+        right_amp = base_amp + amp_gain * action[1]
+
+        left_amp = np.clip(left_amp, 0.1, 0.6)
+        right_amp = np.clip(right_amp, 0.1, 0.6)
+
+        amps = np.array([
+            left_amp, left_amp, left_amp,
+            right_amp, right_amp, right_amp,
+        ])
+        base_freq = 12.0
+        freq_gain = 3.0
+
+        left_freq = base_freq + freq_gain * action[0]
+        right_freq = base_freq + freq_gain * action[1]
+
+        left_freq = np.clip(left_freq, 3.0, 12.0)
+        right_freq = np.clip(right_freq, 3.0, 12.0)
+
+        freqs = np.array([
+            left_freq, left_freq, left_freq,
+            right_freq, right_freq, right_freq,
+        ])"""
+
+        amps = np.repeat(np.abs(action[:, np.newaxis]), 3, axis=1).ravel()
+        freqs = self.intrinsic_freqs.copy()
+        #print("MAX AMPS", np.max(amps), "MAX FREQ", np.max(freqs))
+        freqs[:3] *= 1 if action[0] > 0 else -1
+        freqs[3:] *= 1 if action[1] > 0 else -1
+        self.cpg_network.intrinsic_amps = amps
+        self.cpg_network.intrinsic_freqs = freqs
+
         # 1. Get the leg that needs retraction (or None)
         leg_to_correct_retraction = self.retraction_rule(sim)
+        self.corrected_leg.append(leg_to_correct_retraction)
 
         # 2. Update the retraction persistance
         self.retraction_perisitance_counter[self.retraction_perisitance_counter > 0] += 1
@@ -170,10 +219,11 @@ class HybridTurningController:
         """Returns the leg that meeds retraction (or just None)"""
         # 0. Get the z positions
         body_z = get_bodypart_pos(sim, body_reference)[2]
-        legs_z_pos = get_legs_pos(sim, self.contact_sensor_placements)[:, 2]
+        legs_z_pos = get_legs_pos(sim, list(self.stumbling_sensors.keys()))[:, 2]
 
         # 1. Compute how low each leg is compared to the body
         end_effector_z_pos = body_z - legs_z_pos
+        self.legs_diff_to_body.append(end_effector_z_pos)
 
         # 2. Sort the legs by the relative drop
         end_effector_z_pos_sorted_idx = np.argsort(end_effector_z_pos)
@@ -182,7 +232,7 @@ class HybridTurningController:
         end_effector_z_pos_sorted = end_effector_z_pos[end_effector_z_pos_sorted_idx]
 
         # 4. Check if the lowest leg is an outlier
-        if end_effector_z_pos_sorted[-1] > end_effector_z_pos_sorted[-3] + 0.05:
+        if end_effector_z_pos_sorted[-1] > end_effector_z_pos_sorted[-3] + 0.5:
             # 4.1. Chose the leg to correct
             leg_to_correct_retraction = end_effector_z_pos_sorted_idx[-1]
 
@@ -218,6 +268,9 @@ class HybridTurningController:
     ) -> None:
         contact_forces = sim.get_external_force(sim.fly.name, True)[self.stumbling_sensors[leg], :]
         fly_orientation = get_fly_orientation(sim)
+        if leg not in self.force_hist:
+            self.force_hist[leg] = []
+        self.force_hist[leg].append(contact_forces)
 
         # force projection should be negative if against fly orientation
         force_proj = np.dot(contact_forces, fly_orientation)
@@ -236,7 +289,7 @@ def build_contact_sensor_placements(preprogrammed_steps: PreprogrammedSteps) -> 
     return [
         f"{leg}_{segment}".lower()
         for leg in preprogrammed_steps.legs
-        for segment in ["Tarsus5"]
+        for segment in ["tarsus5"]
     ]
 
 def build_step_phase_initializer(
@@ -286,7 +339,7 @@ def get_bodypart_pos(sim: MiniprojectSimulation, bodypart: str) -> np.ndarray:
 def get_legs_pos(sim: MiniprojectSimulation, legs: list[str]) -> np.ndarray:
     legs_pos = []
     for leg in legs:
-        legs_pos.append(get_bodypart_pos(sim, leg))
+        legs_pos.append(get_bodypart_pos(sim, f"{leg}_tibia"))
 
     return np.asarray(legs_pos)
 

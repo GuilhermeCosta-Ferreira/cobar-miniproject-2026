@@ -3,12 +3,9 @@
 # ================================================================
 import numpy as np
 
-import matplotlib.pyplot as plt
 from miniproject.simulation import MiniprojectSimulation
-from flygym.examples.locomotion.turning_controller import TurningController
 from .hybrid_controller import HybridTurningController
 
-from .turning_controller import damp_drives_for_rough_terrain
 from .wind import (
     Wind,
 )
@@ -20,7 +17,6 @@ from .olfaction import (
 from .vision import (
     obstacle_by_hue,
     produce_human_view,
-    visualize,
     Vision,
     DragonflyAttackDetector
 )
@@ -53,48 +49,38 @@ class Controller:
         odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
         self.olfaction.current_signal = odor_drives
 
-        # WIND (will update odor information)
+        
+        # WIND
         wind = sim.get_antenna_data(sim.fly.name)
-        wind_signal = self.wind.process_wind(wind)
-
-        #wind_x = get_wind_velocity(wind)
+        wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
+        
 
         # VISION
         if sim.enable_grass:
             frame = produce_human_view(sim)
-            self.vision_signal = obstacle_by_hue(frame)
-            odor_turn = odor_drives[0] - odor_drives[1]
-            vision_turn = self.vision_signal[0] - self.vision_signal[1]
-            if odor_turn != 0 and vision_turn != 0:
-                if np.sign(odor_turn) != np.sign(vision_turn):
-                    self.vision_signal *= -1
-            self.vision.add_signal(self.vision_signal)
-        else:
-            self.vision_signal = np.array([0.0, 0.0])
+            vision_signal = obstacle_by_hue(frame)
 
-        control_signals = odor_drives + self.vision_signal + wind_signal
+            self.vision.add_signal(vision_signal)
 
-        if sim.enable_terrain:
-            drives = damp_drives_for_rough_terrain(control_signals)
-        else:
-            drives = np.clip(control_signals, 0.2, 1.3)
+        # UPDATE THIS
+        #updated_olfaction = update_olfaction(lateral_olfactation, wind_x)
+        #control_signals = odor_drives + vision_signal + wind_signal
+        control_signals = odor_drives + vision_signal
+        control_signals = adapt_drives(control_signals)
+        #control_signals = odor_drives
 
-        joint_angles, adhesion = self.turning_controller.step(sim, drives)
-
-        # DRAGONDFLY
-        raw_vision = sim.get_raw_vision(sim.fly.name)
-
-        dragonfly_attack, red_score = self.dragonfly_detector.detect_from_raw_vision(
-            raw_vision=raw_vision,
-            current_step=current_step,
-        )
-
-        self.vision.update_dragonfly_state(
-            score=red_score,
-            attack=dragonfly_attack,
-        )
-
-        if dragonfly_attack:
-            adhesion = np.ones_like(adhesion)
-        
+        #drives = damp_drives_for_rough_terrain(control_signals)
+        joint_angles, adhesion = self.turning_controller.step(sim, control_signals)
+        #joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
+
+
+def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
+    drives = np.asarray(drives, dtype=float)
+
+    max_abs = np.max(np.abs(drives))
+
+    if max_abs <= max_signal:
+        return drives
+
+    return drives / max_abs * max_signal

@@ -42,7 +42,7 @@ def get_obstacles_by_height(mask: np.ndarray, height_threshold: float) -> list:
 def get_obstacles_by_height_fast(
     mask: np.ndarray,
     height_threshold: float,
-) -> list[tuple[float, float]]:
+) -> list[tuple[float, float, float]]:
     # OpenCV wants uint8 single-channel image.
     if mask.dtype == np.bool_:
         mask_u8 = mask.astype(np.uint8)
@@ -56,7 +56,7 @@ def get_obstacles_by_height_fast(
         connectivity=8,
     )
 
-    valid_centroids: list[tuple[float, float]] = []
+    valid_centroids: list[tuple[float, float, float]] = []
 
     # Label 0 is background, so start at 1.
     for label_id in range(1, num_labels):
@@ -64,6 +64,6 @@ def get_obstacles_by_height_fast(
 
         if height >= height_threshold:
             cx, cy = centroids[label_id]
-            valid_centroids.append((float(cx), float(cy)))
+            valid_centroids.append((float(cx), float(cy), float(height)))
 
     return valid_centroids

@@ -10,6 +10,7 @@ from flygym.compose import ActuatorType
 from miniproject.simulation import MiniprojectSimulation
 
 from ..world import SEEDS, SimpleController
+from ..controller import Controller
 from .visualize import produce_human_view
 
 OUT_PATH = Path("submission/datasets")
@@ -46,16 +47,16 @@ def run_sim(
     dataset: list, seed: int, nr_iterations: int, drivers: list[float] = [1.0, 1.0]
 ) -> list:
     sim = MiniprojectSimulation(level=2, seed=seed)
-    controller = SimpleController(sim)
+    controller = Controller(sim)
 
     for i in range(nr_iterations):
-        joint_angles, adhesion = controller.step(sim, np.array(drivers))
+        joint_angles, adhesion = controller.step(sim)
         sim.set_actuator_inputs(sim.fly.name, ActuatorType.POSITION, joint_angles)
         sim.set_actuator_inputs(sim.fly.name, ActuatorType.ADHESION, adhesion)
         sim.step()
         sim.render_as_needed()
 
-        if i % 10000 == 0:
+        if i % 2500 == 0:
             img = produce_human_view(sim)
             dataset.append(img)
 
@@ -67,5 +68,7 @@ def run_sim(
 # ================================================================
 if __name__ == "__main__":
     generate_dataset(
-        nr_iterations=100000,
+        nr_iterations=50000,
+        seeds=[42],
+        file_name='failed_trial_2'
     )
