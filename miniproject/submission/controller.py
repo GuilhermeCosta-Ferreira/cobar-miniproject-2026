@@ -40,6 +40,7 @@ class Controller:
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
         self.vision = Vision()
+
         self.frames = []
         self.vision_gain = vision_gain
         self.vision_signal = np.array([0.0, 0.0])
@@ -57,15 +58,17 @@ class Controller:
 
         # OLFACTION
         olfaction = sim.get_olfaction(sim.fly.name)
-        smooth_olfaction = self.olfaction.process_olfaction(olfaction)
-        lateral_olfaction = average_olfaction_signal(smooth_olfaction)
-        odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
-        self.olfaction.current_signal = odor_drives
-        if(current_step % 10000 == 0):
-            print(f"Lateral olfaction: {lateral_olfaction}")
-            print(f"Odor Drives: {odor_drives}")
+        self.olfaction.process_olfaction(olfaction)
+        lat_olfaction = self.olfaction.average_olfaction_signal()
+        odor_velocity = self.olfaction.build_drive_vector(lat_olfaction, 10, 5, 5)
+        self.olfaction.current_signal = odor_velocity
+
+        drives = self.inverse_model.predict(np.array([odor_velocity]))[0]
 
         # WIND
+        """
+        lateral_olfaction = average_olfaction_signal(smooth_olfaction)
+        odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
         if sim.enable_wind:
             wind = sim.get_antenna_data(sim.fly.name)
             wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
@@ -84,11 +87,12 @@ class Controller:
         # UPDATE THIS
         control_signals = odor_drives + vision_signal + wind_signal
         control_signals = adapt_drives(control_signals)
+        """
 
-        self.current_drive = control_signals
+        self.current_drive = drives
 
         #drives = damp_drives_for_rough_terrain(control_signals)
-        joint_angles, adhesion = self.turning_controller.step(sim, control_signals)
+        joint_angles, adhesion = self.turning_controller.step(sim, drives)
         #joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
 
