@@ -18,8 +18,8 @@ from .vision import (
     obstacle_by_hue,
     produce_human_view,
     Vision,
-    DragonflyAttackDetector
 )
+from .threat import DragonflyAttackDetector, EscapeController
 
 # ================================================================
 # 1. Section: Controler Class
@@ -37,11 +37,28 @@ class Controller:
         self.frames = []
         self.vision_gain = vision_gain
         self.vision_signal = np.array([0.0, 0.0])
+        self.dragonfly_visible = False
+        self.dragonfly_attack = False
+        self.dragonfly_red_score = 0.0
+        self.dragonfly_blob = 0.0
+        self.dragonfly_looming = 0.0
+        self.dragonfly_side_bias = 0.0
+        self.dragonfly_mode = "normal"
+        self.dragonfly_danger_score = 0.0
+        self.dragonfly_escape_direction = 0.0
+        self.stability_score = 1.0
+        self.is_unstable = False
         self.dragonfly_detector = DragonflyAttackDetector(
-            attack_threshold=0.06,
-            hold_steps=10_000,
+            visible_threshold=0.0003,
+            visible_blob_threshold=0.0005,
+            attack_threshold=0.004,
+            blob_threshold=0.001,
+            looming_threshold=0.00025,
+            watch_hold_steps=int(1.5 / sim.timestep),
+            hold_steps=int(0.35 / sim.timestep),
             min_consecutive_hits=1,
         )
+        self.escape_controller = EscapeController()
         self.current_drive = [0.0, 0.0]
 
 
@@ -55,25 +72,64 @@ class Controller:
         odor_drives = odor_intensity_to_control_signal(lateral_olfaction, attractive_gain=-800)
         self.olfaction.current_signal = odor_drives
 
-        # WIND
-        if sim.enable_wind:
-            wind = sim.get_antenna_data(sim.fly.name)
-            wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
-            wind_signal = adapt_drives(wind_signal, max_signal = 0.5)
+        # WIND. This is intentionally perception-driven, not level-flag-driven.
+        wind = sim.get_antenna_data(sim.fly.name)
+        wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
+        wind_signal = adapt_drives(wind_signal, max_signal = 0.5)
+
+        # VISION - grass obstacles
+        frame = produce_human_view(sim)
+        vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
+        self.vision.add_signal(vision_signal)
+        self.vision_signal = vision_signal
+
+        # VISION - dragonfly. This is perception-driven, not level-flag-driven.
+        dragonfly_state = self.dragonfly_detector.detect_state_from_raw_vision(
+            raw_vision=sim.get_raw_vision(sim.fly.name),
+            current_step=current_step,
+        )
+        self.dragonfly_visible = bool(dragonfly_state["visible"])
+        self.dragonfly_attack = bool(dragonfly_state["attack"])
+        self.dragonfly_red_score = float(dragonfly_state["red_score"])
+        self.dragonfly_blob = float(dragonfly_state["largest_blob_frac"])
+        self.dragonfly_looming = float(dragonfly_state["looming"])
+        self.dragonfly_side_bias = float(dragonfly_state["side_bias"])
+        self.vision.update_dragonfly_state(
+            score=self.dragonfly_red_score,
+            attack=self.dragonfly_attack,
+        )
+
+        escape_decision = self.escape_controller.step(sim, dragonfly_state)
+        self.dragonfly_mode = escape_decision.mode
+        self.dragonfly_danger_score = escape_decision.danger_score
+        self.dragonfly_escape_direction = escape_decision.direction
+        self.stability_score = escape_decision.stability_score
+        self.is_unstable = escape_decision.unstable
+
+        if escape_decision.mode == "recovery":
+            control_signals = (
+                escape_decision.drives
+                + vision_signal
+                + 0.5 * wind_signal
+            )
+            control_signals = adapt_drives(control_signals, max_signal=1.0)
+        elif escape_decision.mode != "normal":
+            # During dragonfly danger, odor pursuit is suppressed so the fly does
+            # not turn away from a visible threat just to follow the banana plume.
+            control_signals = (
+                escape_decision.drives
+                + vision_signal
+                + 0.5 * wind_signal
+            )
+            max_signal = 2.3 if escape_decision.mode == "panic_escape" else 1.6
+            control_signals = keep_escape_drives_forward(
+                control_signals,
+                escape_decision.mode,
+            )
+            control_signals = adapt_drives(control_signals, max_signal=max_signal)
         else:
-            wind_signal = np.array([0.0, 0.0])
-
-        # VISION
-        vision_signal = np.array([0.0, 0.0])
-        if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
-            frame = produce_human_view(sim)
-            vision_signal = obstacle_by_hue(frame, turn_gain=self.vision_gain)
-
-            self.vision.add_signal(vision_signal)
-
-        # UPDATE THIS
-        control_signals = odor_drives + vision_signal + wind_signal
-        control_signals = adapt_drives(control_signals)
+            control_signals = odor_drives + vision_signal + wind_signal
+            control_signals = adapt_drives(control_signals)
 
         self.current_drive = control_signals
 
@@ -92,3 +148,16 @@ def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
         return drives
 
     return drives / max_abs * max_signal
+
+
+def keep_escape_drives_forward(drives: np.ndarray, mode: str) -> np.ndarray:
+    drives = np.asarray(drives, dtype=float)
+
+    min_drive_by_mode = {
+        "watch": 0.15,
+        "planned_escape": 0.55,
+        "panic_escape": 1.05,
+    }
+    min_drive = min_drive_by_mode.get(mode, 0.0)
+
+    return np.maximum(drives, min_drive)

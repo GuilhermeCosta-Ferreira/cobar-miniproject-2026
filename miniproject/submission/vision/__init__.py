@@ -4,7 +4,7 @@ from .detection import (
     red_score_from_rgb,
     dragonfly_red_score_from_raw_vision,
 )
-from .dragonfly import DragonflyAttackDetector
+from ..threat import DragonflyAttackDetector
 from .Vision import Vision
 
 __all__ = [
