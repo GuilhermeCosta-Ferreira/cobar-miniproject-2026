@@ -15,8 +15,6 @@ from flygym.compose import ActuatorType
 from ..controller import Controller
 from ..config import load_config
 
-
-
 # ================================================================
 # 1. Section: INPUTS
 # ================================================================
@@ -38,7 +36,6 @@ SLOW_DOWN_RATE_LIST: list[float] = np.linspace(0.3, 0.7, 3).tolist()
 ALPHA_LIST: list[float] = np.linspace(0.01, 0.20, 3).tolist()
 
 
-
 # ================================================================
 # 2. Section: FUNCTIONS
 # ================================================================
@@ -52,11 +49,13 @@ def score_result(result: dict) -> float:
     # Faster success is better
     return 1000.0 - 0.01 * result["steps"]
 
+
 def got_to_food(sim: MiniprojectSimulation) -> bool:
     banana_xy = sim.world.banana_xy
     fly_xy = np.array(sim.get_body_positions(sim.fly.name)[0][:2])
     dist = np.sqrt(np.sum((fly_xy - banana_xy) ** 2))
     return dist <= 3
+
 
 def fell(sim: MiniprojectSimulation) -> bool:
     fly_body = sim.get_body_positions(sim.fly.name)[0][2]
@@ -64,6 +63,7 @@ def fell(sim: MiniprojectSimulation) -> bool:
     if fly_body < leg_pos:
         return True
     return False
+
 
 def format_params(config: dict) -> str:
     vision = config["vision"]
@@ -75,6 +75,7 @@ def format_params(config: dict) -> str:
         f"slow_down_rate={vision['slow_down_rate']}, "
         f"alpha={vision['alpha']}"
     )
+
 
 def run_sim(
     level: int,
@@ -141,6 +142,7 @@ def run_sim(
     result["steps"] = MAX_NUM_STEPS
     return result
 
+
 def build_config_from_trial(trial: optuna.Trial) -> dict:
     config = load_config(BASE_CONFIG_PATH)
 
@@ -154,31 +156,53 @@ def build_config_from_trial(trial: optuna.Trial) -> dict:
         "f": {
             "coxa_lift": 0.0,
             "coxa_roll": 0.0,
-            "coxa_yaw": trial.suggest_float("f_coxa_yaw", -correction_range, correction_range),
-            "femur_lift": trial.suggest_float("f_femur_lift", -correction_range, correction_range),
+            "coxa_yaw": trial.suggest_float(
+                "f_coxa_yaw", -correction_range, correction_range
+            ),
+            "femur_lift": trial.suggest_float(
+                "f_femur_lift", -correction_range, correction_range
+            ),
             "femur_roll": 0.0,
-            "tibia_lift": trial.suggest_float("f_tibia_lift", -correction_range, correction_range),
-            "tarsus1_lift": trial.suggest_float("f_tarsus1_lift", -correction_range, correction_range),
+            "tibia_lift": trial.suggest_float(
+                "f_tibia_lift", -correction_range, correction_range
+            ),
+            "tarsus1_lift": trial.suggest_float(
+                "f_tarsus1_lift", -correction_range, correction_range
+            ),
         },
-
         "m": {
             "coxa_lift": 0.0,
             "coxa_roll": 0.0,
-            "coxa_yaw": trial.suggest_float("m_coxa_yaw", -correction_range, correction_range),
-            "femur_lift": trial.suggest_float("m_femur_lift", -correction_range, correction_range),
+            "coxa_yaw": trial.suggest_float(
+                "m_coxa_yaw", -correction_range, correction_range
+            ),
+            "femur_lift": trial.suggest_float(
+                "m_femur_lift", -correction_range, correction_range
+            ),
             "femur_roll": 0.0,
-            "tibia_lift": trial.suggest_float("m_tibia_lift", -correction_range, correction_range),
-            "tarsus1_lift": trial.suggest_float("m_tarsus1_lift", -correction_range, correction_range),
+            "tibia_lift": trial.suggest_float(
+                "m_tibia_lift", -correction_range, correction_range
+            ),
+            "tarsus1_lift": trial.suggest_float(
+                "m_tarsus1_lift", -correction_range, correction_range
+            ),
         },
-
         "h": {
             "coxa_lift": 0.0,
             "coxa_roll": 0.0,
-            "coxa_yaw": trial.suggest_float("h_coxa_yaw", -correction_range, correction_range),
-            "femur_lift": trial.suggest_float("h_femur_lift", -correction_range, correction_range),
+            "coxa_yaw": trial.suggest_float(
+                "h_coxa_yaw", -correction_range, correction_range
+            ),
+            "femur_lift": trial.suggest_float(
+                "h_femur_lift", -correction_range, correction_range
+            ),
             "femur_roll": 0.0,
-            "tibia_lift": trial.suggest_float("h_tibia_lift", -correction_range, correction_range),
-            "tarsus1_lift": trial.suggest_float("h_tarsus1_lift", -correction_range, correction_range),
+            "tibia_lift": trial.suggest_float(
+                "h_tibia_lift", -correction_range, correction_range
+            ),
+            "tarsus1_lift": trial.suggest_float(
+                "h_tarsus1_lift", -correction_range, correction_range
+            ),
         },
     }
 
@@ -217,6 +241,7 @@ def build_config_from_trial(trial: optuna.Trial) -> dict:
     """
 
     return config
+
 
 def objective(trial: optuna.Trial) -> float:
     config = build_config_from_trial(trial)

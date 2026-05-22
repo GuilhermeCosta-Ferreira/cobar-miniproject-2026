@@ -4,7 +4,6 @@
 import numpy as np
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -28,12 +27,8 @@ def get_velocity_vector(
     centrality = (centroid_x - image_width / 2) / (image_width / 2)
     height_ratio = centroid_h / image_height
 
-    risk = np.clip(
-        (height_ratio - h_far) / (h_stop - h_far),
-        0.0,
-        1.0
-    )
-    risk = risk ** 2
+    risk = np.clip((height_ratio - h_far) / (h_stop - h_far), 0.0, 1.0)
+    risk = risk**2
 
     vf = -(current_forward_velocity * slow_down_rate) * risk #0.0
 

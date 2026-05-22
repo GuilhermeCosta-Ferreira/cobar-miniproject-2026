@@ -109,7 +109,10 @@ def select_escape_mode(
     if not bool(dragonfly_state.get("visible", False)) and danger_score <= 0.0:
         return "normal"
 
-    if bool(dragonfly_state.get("attack", False)) or danger_score >= cfg.panic_threshold:
+    if (
+        bool(dragonfly_state.get("attack", False))
+        or danger_score >= cfg.panic_threshold
+    ):
         return "panic_escape"
 
     return "watch"

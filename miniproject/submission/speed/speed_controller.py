@@ -15,10 +15,9 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 
 from .utils import LEG_NAMES, run_simulation
-from ..hybrid_controller import HybridTurningController
+from ..gait import HybridTurningController
 
 from miniproject.simulation import MiniprojectSimulation
-
 
 
 # ================================================================
@@ -30,12 +29,14 @@ def got_to_food(sim: MiniprojectSimulation) -> bool:
     dist = np.sqrt(np.sum((fly_xy - banana_xy) ** 2))
     return dist <= 3
 
+
 def fell(sim: MiniprojectSimulation) -> bool:
     fly_body = sim.get_body_positions(sim.fly.name)[0][2]
     leg_pos = sim.get_body_positions(sim.fly.name)[-1][2]
     if fly_body < leg_pos:
         return True
     return False
+
 
 def run_turning_simulation(
     action,
@@ -105,7 +106,6 @@ def get_fwd_rot_vel(hists, timestep=1e-4):
     angles = np.unwrap(np.angle(heading), axis=-1)
     vr = (angles[..., -1] - angles[..., 0]) / ((angles.shape[-1] - 1) * timestep)
     return vf, vr
-
 
 
 # ================================================================
@@ -181,11 +181,15 @@ if __name__ == "__main__":
     axs[0].scatter(Y[:, 0], model.predict(X)[:, 0], c="k", lw=0, marker=".")
     axs[0].set_xlabel("True $\\delta_L$")
     axs[0].set_ylabel("Predicted $\\delta_L$")
-    axs[0].text(0.02, 0.98, f"$R^2$ = {r2[0]:.4f}", transform=axs[0].transAxes, va="top")
+    axs[0].text(
+        0.02, 0.98, f"$R^2$ = {r2[0]:.4f}", transform=axs[0].transAxes, va="top"
+    )
     axs[1].scatter(Y[:, 1], model.predict(X)[:, 1], c="k", lw=0, marker=".")
     axs[1].set_xlabel("True $\\delta_R$")
     axs[1].set_ylabel("Predicted $\\delta_R$")
-    axs[1].text(0.02, 0.98, f"$R^2$ = {r2[1]:.4f}", transform=axs[1].transAxes, va="top")
+    axs[1].text(
+        0.02, 0.98, f"$R^2$ = {r2[1]:.4f}", transform=axs[1].transAxes, va="top"
+    )
     for ax in axs:
         ax.set_aspect(1)
     plt.show()

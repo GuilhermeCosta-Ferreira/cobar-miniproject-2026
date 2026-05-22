@@ -16,8 +16,6 @@ from submission.controller import Controller
 from flygym.compose import ActuatorType
 from submission.periphery import SEEDS
 
-
-
 # ================================================================
 # 1. Section: INPUTS
 # ================================================================
@@ -33,7 +31,6 @@ DROPOFF_VT_LIST: list[float] = np.linspace(3, 7, 3).tolist()
 OLFACTION_GAIN_LIST: list[float] = np.linspace(2, 7, 3).tolist()
 
 
-
 # ================================================================
 # 2. Section: FUNCTIONS
 # ================================================================
@@ -43,12 +40,14 @@ def got_to_food(sim: MiniprojectSimulation) -> bool:
     dist = np.sqrt(np.sum((fly_xy - banana_xy) ** 2))
     return dist <= 3
 
+
 def fell(sim: MiniprojectSimulation) -> bool:
     fly_body = sim.get_body_positions(sim.fly.name)[0][2]
     leg_pos = sim.get_body_positions(sim.fly.name)[-1][2]
     if fly_body < leg_pos:
         return True
     return False
+
 
 def run_sim(
     level: int,
@@ -104,6 +103,7 @@ def run_sim(
     result["steps"] = MAX_NUM_STEPS
     return result
 
+
 def build_param_grid() -> list[dict]:
     configs = []
 
@@ -124,12 +124,11 @@ def build_param_grid() -> list[dict]:
             },
             "olfaction": {
                 "gain": float(olfaction_gain),
-            }
+            },
         }
         configs.append(config)
 
     return configs
-
 
 
 # ================================================================

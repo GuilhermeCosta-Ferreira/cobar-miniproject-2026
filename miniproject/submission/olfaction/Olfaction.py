@@ -5,8 +5,7 @@
 # ================================================================
 import numpy as np
 
-from dataclasses import dataclass, field\
-
+from dataclasses import dataclass, field
 from .signal_processing import get_smooth_olfaction, get_average_signal
 from .velocity import get_velocity_vector
 
@@ -45,7 +44,9 @@ class Olfaction:
         self, signal: np.ndarray, current_vf: float, max_vt: float, gain: float
     ) -> np.ndarray:
         # 1. Temporal smooths it to avoid big oscilations
-        self.olfaction_smooth = get_smooth_olfaction(self.olfaction_smooth, signal, self.alpha)
+        self.olfaction_smooth = get_smooth_olfaction(
+            self.olfaction_smooth, signal, self.alpha
+        )
 
         # 2. Averages it over the lateralizaed antena
         lat_olfaction = get_average_signal(self.olfaction_smooth)
@@ -53,10 +54,10 @@ class Olfaction:
 
         # 3. Converts into velocities
         odor_velocity = get_velocity_vector(
-            lat_olfaction = lat_olfaction,
-            forward_velocity = current_vf,
-            max_turn_velocity = max_vt,
-            gain = gain
+            lat_olfaction=lat_olfaction,
+            forward_velocity=current_vf,
+            max_turn_velocity=max_vt,
+            gain=gain,
         )
         self.current_signal = odor_velocity
         self._velocity_history.append(odor_velocity)

@@ -101,9 +101,9 @@ class DragonflyAttackDetector:
             or largest_blob_frac > self.visible_blob_threshold
         )
         attack_cue = (
-            (red_score > self.attack_threshold and largest_blob_frac > self.blob_threshold)
-            or self.current_looming > self.looming_threshold
-        )
+            red_score > self.attack_threshold
+            and largest_blob_frac > self.blob_threshold
+        ) or self.current_looming > self.looming_threshold
 
         if visible_cue:
             self.visible_memory_until = current_step + self.watch_hold_steps

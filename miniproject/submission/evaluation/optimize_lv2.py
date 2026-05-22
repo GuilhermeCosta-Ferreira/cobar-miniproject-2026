@@ -19,8 +19,6 @@ from ..controller import Controller
 from ..periphery import SEEDS
 from ..config import load_config
 
-
-
 # ================================================================
 # 1. Section: INPUTS
 # ================================================================
@@ -40,7 +38,6 @@ SLOW_DOWN_RATE_LIST: list[float] = np.linspace(0.3, 0.7, 3).tolist()
 ALPHA_LIST: list[float] = np.linspace(0.01, 0.20, 3).tolist()
 
 
-
 # ================================================================
 # 2. Section: FUNCTIONS
 # ================================================================
@@ -50,12 +47,14 @@ def got_to_food(sim: MiniprojectSimulation) -> bool:
     dist = np.sqrt(np.sum((fly_xy - banana_xy) ** 2))
     return dist <= 3
 
+
 def fell(sim: MiniprojectSimulation) -> bool:
     fly_body = sim.get_body_positions(sim.fly.name)[0][2]
     leg_pos = sim.get_body_positions(sim.fly.name)[-1][2]
     if fly_body < leg_pos:
         return True
     return False
+
 
 def format_params(config: dict) -> str:
     vision = config["vision"]
@@ -67,6 +66,7 @@ def format_params(config: dict) -> str:
         f"slow_down_rate={vision['slow_down_rate']}, "
         f"alpha={vision['alpha']}"
     )
+
 
 def run_sim(
     level: int,
@@ -133,6 +133,7 @@ def run_sim(
     result["steps"] = MAX_NUM_STEPS
     return result
 
+
 def build_param_grid() -> list[dict]:
     configs = []
     base_config = load_config(BASE_CONFIG_PATH)
@@ -158,7 +159,6 @@ def build_param_grid() -> list[dict]:
         configs.append(config)
 
     return configs
-
 
 
 # ================================================================

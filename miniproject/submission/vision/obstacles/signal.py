@@ -41,17 +41,14 @@ def get_signals_from_centroids(
         centrality_importance = 0.3
         height_importance = 0.7
 
-        risk = (
-            centrality_importance * centrality
-            + height_importance * height_weight
-        )
+        risk = centrality_importance * centrality + height_importance * height_weight
 
         scored_centroids.append((risk, cx, cy, obs_height, offset))
 
     # Select the most dangerous obstacle, not just the tallest one
     risk, cx, cy, obs_height, offset = max(scored_centroids, key=lambda x: x[0])
 
-    #print(f"SELECTED: cx={cx}, cy={cy}, height={obs_height}, risk={risk:.3f}")
+    # print(f"SELECTED: cx={cx}, cy={cy}, height={obs_height}, risk={risk:.3f}")
 
     # Direction:
     # obstacle right -> offset > 0 -> turn left

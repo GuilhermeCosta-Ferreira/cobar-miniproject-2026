@@ -4,14 +4,11 @@
 import numpy as np
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
 def get_smooth_vision(
-    olfaction_smooth: np.ndarray | None,
-    signal: np.ndarray,
-    alpha: float
+    olfaction_smooth: np.ndarray | None, signal: np.ndarray, alpha: float
 ) -> np.ndarray:
     """Applies a smoothing, when possible to vision"""
     if olfaction_smooth is None:

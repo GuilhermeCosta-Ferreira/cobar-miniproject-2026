@@ -7,7 +7,7 @@ from pathlib import Path
 from joblib import load
 
 from miniproject.simulation import MiniprojectSimulation
-from .hybrid_controller import HybridTurningController
+from .gait import HybridTurningController
 
 from .wind import Wind
 from .olfaction import Olfaction
@@ -39,6 +39,8 @@ class Controller:
 
         self.olfaction_gain = config["olfaction"]["gain"]
 
+        wind_cfg = config["wind"]
+
         hybrid_cfg = config["hybrid"]
         f_cfg = hybrid_cfg["f"]
         m_cfg = hybrid_cfg["m"]
@@ -46,42 +48,48 @@ class Controller:
         self.max_increment = config["hybrid_max_increment"]
 
         self.correction_vectors = {
-            "f": np.array([
-                f_cfg["coxa_lift"],
-                f_cfg["coxa_roll"],
-                f_cfg["coxa_yaw"],
-                f_cfg["femur_lift"],
-                f_cfg["femur_roll"],
-                f_cfg["tibia_lift"],
-                f_cfg["tarsus1_lift"],
-            ]),
-            "m": np.array([
-                m_cfg["coxa_lift"],
-                m_cfg["coxa_roll"],
-                m_cfg["coxa_yaw"],
-                m_cfg["femur_lift"],
-                m_cfg["femur_roll"],
-                m_cfg["tibia_lift"],
-                m_cfg["tarsus1_lift"],
-            ]),
-            "h": np.array([
-                h_cfg["coxa_lift"],
-                h_cfg["coxa_roll"],
-                h_cfg["coxa_yaw"],
-                h_cfg["femur_lift"],
-                h_cfg["femur_roll"],
-                h_cfg["tibia_lift"],
-                h_cfg["tarsus1_lift"],
-            ]),
+            "f": np.array(
+                [
+                    f_cfg["coxa_lift"],
+                    f_cfg["coxa_roll"],
+                    f_cfg["coxa_yaw"],
+                    f_cfg["femur_lift"],
+                    f_cfg["femur_roll"],
+                    f_cfg["tibia_lift"],
+                    f_cfg["tarsus1_lift"],
+                ]
+            ),
+            "m": np.array(
+                [
+                    m_cfg["coxa_lift"],
+                    m_cfg["coxa_roll"],
+                    m_cfg["coxa_yaw"],
+                    m_cfg["femur_lift"],
+                    m_cfg["femur_roll"],
+                    m_cfg["tibia_lift"],
+                    m_cfg["tarsus1_lift"],
+                ]
+            ),
+            "h": np.array(
+                [
+                    h_cfg["coxa_lift"],
+                    h_cfg["coxa_roll"],
+                    h_cfg["coxa_yaw"],
+                    h_cfg["femur_lift"],
+                    h_cfg["femur_roll"],
+                    h_cfg["tibia_lift"],
+                    h_cfg["tarsus1_lift"],
+                ]
+            ),
         }
 
         self.turning_controller = HybridTurningController(
             sim.timestep,
-            max_increment = self.max_increment,
-            correction_vectors = self.correction_vectors
+            max_increment=self.max_increment,
+            correction_vectors=self.correction_vectors,
         )
         self.olfaction = Olfaction()
-        self.wind = Wind(sim.mj_model)
+        self.wind = Wind(sim.mj_model, wind_cfg)
         self.vision = Vision(config["vision"])
 
         self.dragonfly_visible = False
@@ -103,11 +111,19 @@ class Controller:
         self.obstacle_velocity = np.array([0.0, 0.0])
         self.inverse_model = load(MODEL_PATH)
 
+        signal_20 = self.inverse_model.predict(np.array([np.array([20, 0])]))[0]
+        signal_15 = self.inverse_model.predict(np.array([np.array([15, 0])]))[0]
+        signal_10 = self.inverse_model.predict(np.array([np.array([10, 0])]))[0]
+
+        """
+        print(f"Signal for 20 forward: {signal_20}")
+        print(f"Signal for 15 forward: {signal_15}")
+        print(f"Signal for 10 forward: {signal_10}")
+        """
+
         self._velocity_history: list = []
         self._drive_history: list = []
-
-
-
+        self._adhesion_buffer = np.zeros(6)  # legs: [lf, lm, lh, rf, rm, rh]
 
     # ================================================================
     # 2. Section: Properties
@@ -120,11 +136,18 @@ class Controller:
     def drive_hist(self):
         return np.asarray(self._drive_history)
 
-
-
     # ================================================================
     # 3. Section: Methods
     # ================================================================
+    def add_adhesion(self, mask: np.ndarray) -> None:
+        """OR a per-leg 0/1 mask into this frame's adhesion buffer.
+
+        Call any number of times before step() returns; the buffer is
+        merged with the CPG adhesion signal and then reset each step.
+        Leg order: [lf, lm, lh, rf, rm, rh].
+        """
+        self._adhesion_buffer = np.maximum(self._adhesion_buffer, mask)
+
     def step(self, sim: MiniprojectSimulation):
         current_step = sim._curr_step
         current_vf = self.base_vf
@@ -136,19 +159,28 @@ class Controller:
         )
 
         # WIND
-        wind_velocity = np.array([0.0, 0.0])
-        if sim.enable_wind:
-            wind = sim.get_antenna_data(sim.fly.name)
-            wind_signal = self.wind.process_wind(
-                wind,
-                bias=0,
-                lat_k=0.7,
-                fwd_k=0.5,
+
+        wind = sim.get_antenna_data(sim.fly.name)
+        wind_velocity, wind_adhesion = self.wind.process_wind(wind)
+        if wind_adhesion is not None:
+            self.add_adhesion(wind_adhesion)
+
+        # VISION
+        vision_velocity = np.array([0.0, 0.0])
+        if sim.enable_grass:
+            vision_velocity = self.vision.obstacle_to_velocity(
+                sim=sim,
+                current_forward_vel=odor_velocity[0],
             )
-            wind_velocity = wind_signal_to_velocity(wind_signal)
-        else:
-            self.wind.current_signal = np.array([0.0, 0.0])
-        self.wind_velocity = wind_velocity
+
+        velocity = vision_velocity + wind_velocity + odor_velocity
+        velocity = drifter(
+            current_velocity=velocity, dropoff_vt=self.dropoff_vt, max_vt=self.max_vt
+        )
+        self._velocity_history.append(velocity)
+
+        drives = self.inverse_model.predict(np.array([velocity]))[0]
+        self._drive_history.append(drives)
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
         dragonfly_state = DEFAULT_DRAGONFLY_STATE.copy()
@@ -210,7 +242,7 @@ class Controller:
                 max_turn=escape_config.panic_max_turn_velocity,
             )
         else:
-            velocity = odor_velocity + vision_velocity + wind_velocity
+            velocity = odor_velocity + vision_velocity# + wind_velocity
             velocity = drifter(
                 current_velocity = velocity,
                 dropoff_vt = self.dropoff_vt,
@@ -226,6 +258,8 @@ class Controller:
         self._drive_history.append(drives)
 
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
+        adhesion = np.maximum(adhesion, self._adhesion_buffer)
+        self._adhesion_buffer[:] = 0
         return joint_angles, adhesion
 
 
