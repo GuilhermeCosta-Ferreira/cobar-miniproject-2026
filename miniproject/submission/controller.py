@@ -243,7 +243,7 @@ class Controller:
                 max_turn=escape_config.panic_max_turn_velocity,
             )
         else:
-            velocity = odor_velocity + vision_velocity + wind_velocity
+            velocity = odor_velocity + vision_velocity# + wind_velocity
             velocity = drifter(
                 current_velocity = velocity,
                 dropoff_vt = self.dropoff_vt,
