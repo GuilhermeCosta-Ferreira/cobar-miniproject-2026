@@ -31,7 +31,6 @@ class EscapeConfig:
     panic_turn_velocity: float = 2.0
     panic_odor_turn_gain: float = 0.15
     burst_obstacle_gain: float = 2.4
-    burst_obstacle_brake_gain: float = 1.5
     burst_wind_gain: float = 0.5
     panic_max_forward_velocity: float = 20.0
     panic_max_turn_velocity: float = 2.5

@@ -165,8 +165,6 @@ class Controller:
                 + escape_config.burst_obstacle_gain * vision_velocity
                 + escape_config.burst_wind_gain * wind_velocity
             )
-            if vision_velocity[0] < 0.0:
-                velocity[0] += escape_config.burst_obstacle_brake_gain * vision_velocity[0]
             velocity = adapt_velocity(
                 velocity,
                 max_forward=escape_config.panic_max_forward_velocity,
