@@ -155,14 +155,12 @@ class Controller:
         )
 
         # WIND
-        """
-        if sim.enable_wind:
+        if sim.enable_wind: # REMOVE
             wind = sim.get_antenna_data(sim.fly.name)
-            wind_signal = self.wind.process_wind(wind, bias=0, lat_k=2, fwd_k=2) # gain values heuristically set
-            wind_signal = adapt_drives(wind_signal, max_signal = 0.5)
+            wind_velocity = self.wind.process_wind(wind, bias=0, lat_k=1, fwd_k=1)
         else:
-            wind_signal = np.array([0.0, 0.0])
-        """
+            wind_velocity = np.array([0.0, 0.0])
+        
 
         # VISION
         vision_velocity = np.array([0.0, 0.0])
@@ -178,7 +176,7 @@ class Controller:
                 alpha = self.vision_alpha
             )
 
-        velocity = odor_velocity + vision_velocity
+        velocity = odor_velocity + vision_velocity + wind_velocity
         velocity = drifter(
             current_velocity = velocity,
             dropoff_vt = self.dropoff_vt,
