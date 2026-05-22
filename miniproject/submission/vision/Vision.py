@@ -20,6 +20,7 @@ from .signal_processing import get_smooth_vision
 class Vision:
     config: dict
     vision_smooth: np.ndarray = field(default_factory=lambda: np.zeros(2))
+    current_signal: np.ndarray = field(default_factory=lambda: np.zeros(2))
 
     min_height: float = field(init=False)
     scare_height: float = field(init=False)
@@ -143,5 +144,10 @@ class Vision:
             self.alpha
         )
         self._velocity_history.append(self.vision_smooth)
+        self.current_signal = self.vision_smooth
 
         return self.vision_smooth
+
+    def update_dragonfly_state(self, score: float, attack: bool) -> None:
+        self.current_dragonfly_score = float(score)
+        self.current_dragonfly_attack = bool(attack)
