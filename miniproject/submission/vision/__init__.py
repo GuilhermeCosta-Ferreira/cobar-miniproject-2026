@@ -4,7 +4,6 @@ from .detection import (
     red_score_from_rgb,
     dragonfly_red_score_from_raw_vision,
 )
-from ..threat import DragonflyAttackDetector
 from .Vision import Vision
 
 __all__ = [
@@ -12,6 +11,5 @@ __all__ = [
     "obstacle_by_hue",
     "red_score_from_rgb",
     "dragonfly_red_score_from_raw_vision",
-    "DragonflyAttackDetector",
     "Vision",
 ]
