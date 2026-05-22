@@ -24,7 +24,7 @@ class Olfaction:
     _velocity_history: list = field(default_factory=list)
 
     forward_velocity: float = 10.0
-    max_turn_velocity: float = 5.0
+    max_turn_velocity: float = 8.0
     min_forward_velocity: float = 5.0
 
     # ================================================================

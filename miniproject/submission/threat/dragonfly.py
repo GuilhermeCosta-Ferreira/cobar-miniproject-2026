@@ -17,13 +17,13 @@ DEFAULT_DRAGONFLY_STATE: dict[str, float | bool] = {
 
 @dataclass(frozen=True)
 class DragonflyDetectorConfig:
-    visible_threshold: float = 0.0005
-    visible_blob_threshold: float = 0.0008
+    visible_threshold: float = 0.0003
+    visible_blob_threshold: float = 0.0005
     attack_threshold: float = 0.008
     blob_threshold: float = 0.002
     looming_threshold: float = 0.00045
     watch_hold_seconds: float = 1.5
-    attack_hold_seconds: float = 0.35
+    attack_hold_seconds: float = 0.3
     min_consecutive_hits: int = 1
 
 

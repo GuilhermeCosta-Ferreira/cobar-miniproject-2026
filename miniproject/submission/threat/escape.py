@@ -14,27 +14,31 @@ class DangerConfig:
     area_weight: float = 0.40
     expansion_weight: float = 0.35
     red_weight: float = 0.15
-    planned_threshold: float = 0.20
     panic_threshold: float = 0.55
 
 
 @dataclass
 class EscapeConfig:
     danger: DangerConfig = field(default_factory=DangerConfig)
-    watch_forward_velocity: float = 3.0
-    planned_forward_velocity: float = 13.0
-    planned_turn_velocity: float = 1.5
+    watch_forward_velocity: float = 3.5
+    watch_turn_velocity: float = 1.5
+    watch_odor_turn_gain: float = 0.12
+    watch_obstacle_gain: float = 0.9
+    watch_wind_gain: float = 0.4
+    watch_max_forward_velocity: float = 5.0
+    watch_max_turn_velocity: float = 1.0
     panic_forward_velocity: float = 18.0
-    panic_turn_velocity: float = 0.5
+    panic_turn_velocity: float = 2.0
+    panic_odor_turn_gain: float = 0.15
+    burst_obstacle_gain: float = 2.4
+    burst_obstacle_brake_gain: float = 1.5
+    burst_wind_gain: float = 0.5
+    panic_max_forward_velocity: float = 20.0
+    panic_max_turn_velocity: float = 2.5
     watch_drive: float = 0.25
-    planned_forward_drive: float = 1.1
-    planned_turn_drive: float = 0.55
     panic_forward_drive: float = 1.9
     panic_turn_drive: float = 0.8
     centered_side_threshold: float = 0.15
-    unstable_up_threshold: float = 0.35
-    stable_up_threshold: float = 0.55
-    recovery_drive: float = 0.25
 
 
 @dataclass
@@ -44,8 +48,6 @@ class EscapeDecision:
     direction: float
     velocity: np.ndarray
     drives: np.ndarray
-    stability_score: float
-    unstable: bool
 
 
 def _clip01(value: float) -> float:
@@ -111,9 +113,6 @@ def select_escape_mode(
     if bool(dragonfly_state.get("attack", False)) or danger_score >= cfg.panic_threshold:
         return "panic_escape"
 
-    if danger_score >= cfg.planned_threshold:
-        return "planned_escape"
-
     return "watch"
 
 
@@ -133,14 +132,9 @@ def compute_escape_drives(
     if mode == "watch":
         return np.array([cfg.watch_drive, cfg.watch_drive], dtype=float)
 
-    if mode == "planned_escape":
-        base = cfg.planned_forward_drive
-        turn = cfg.planned_turn_drive
-    elif mode == "panic_escape":
+    if mode == "panic_escape":
         base = cfg.panic_forward_drive
         turn = cfg.panic_turn_drive
-    elif mode == "recovery":
-        return np.array([cfg.recovery_drive, cfg.recovery_drive], dtype=float)
     else:
         return np.zeros(2, dtype=float)
 
@@ -166,53 +160,13 @@ def compute_escape_velocity(
     if mode == "watch":
         return np.array([cfg.watch_forward_velocity, 0.0], dtype=float)
 
-    if mode == "planned_escape":
-        forward = cfg.planned_forward_velocity
-        turn = cfg.planned_turn_velocity
-    elif mode == "panic_escape":
+    if mode == "panic_escape":
         forward = cfg.panic_forward_velocity
         turn = cfg.panic_turn_velocity
     else:
         return np.zeros(2, dtype=float)
 
     return np.array([forward, -direction * turn], dtype=float)
-
-
-def quat_to_up_z(quat: np.ndarray | list[float]) -> float:
-    """Return the world z-component of the body +z axis for a MuJoCo wxyz quat."""
-    w, x, y, z = np.asarray(quat, dtype=float)
-    return float(1.0 - 2.0 * (x * x + y * y))
-
-
-def compute_body_stability(
-    sim,
-    body_reference: str = "c_thorax",
-    unstable_up_threshold: float = 0.35,
-    stable_up_threshold: float = 0.55,
-) -> tuple[float, bool]:
-    """
-    Estimate whether the fly is upright enough to safely execute an escape burst.
-    """
-    body_segments = sim.fly.get_bodysegs_order()
-    body_names = [seg.name if hasattr(seg, "name") else str(seg) for seg in body_segments]
-
-    if body_reference in body_names:
-        body_idx = body_names.index(body_reference)
-    else:
-        root_name = (
-            sim.fly.root_segment.name
-            if hasattr(sim.fly.root_segment, "name")
-            else str(sim.fly.root_segment)
-        )
-        body_idx = body_names.index(root_name) if root_name in body_names else 0
-
-    quat = sim.get_body_rotations(sim.fly.name)[body_idx]
-    up_z = quat_to_up_z(quat)
-    stability_score = _clip01(
-        (up_z - unstable_up_threshold) / (stable_up_threshold - unstable_up_threshold)
-    )
-
-    return stability_score, up_z < unstable_up_threshold
 
 
 class EscapeController:
@@ -224,30 +178,9 @@ class EscapeController:
             direction=0.0,
             velocity=np.zeros(2, dtype=float),
             drives=np.zeros(2, dtype=float),
-            stability_score=1.0,
-            unstable=False,
         )
 
     def step(self, sim, dragonfly_state: dict[str, float | bool]) -> EscapeDecision:
-        stability_score, unstable = compute_body_stability(
-            sim,
-            unstable_up_threshold=self.config.unstable_up_threshold,
-            stable_up_threshold=self.config.stable_up_threshold,
-        )
-
-        if unstable:
-            decision = EscapeDecision(
-                mode="recovery",
-                danger_score=0.0,
-                direction=0.0,
-                velocity=compute_escape_velocity("recovery", 0.0, self.config),
-                drives=compute_escape_drives("recovery", 0.0, self.config),
-                stability_score=stability_score,
-                unstable=True,
-            )
-            self.last_decision = decision
-            return decision
-
         danger_score = compute_danger_score(dragonfly_state, self.config.danger)
         mode = select_escape_mode(dragonfly_state, danger_score, self.config.danger)
         direction = compute_escape_direction(
@@ -263,8 +196,6 @@ class EscapeController:
             direction=direction,
             velocity=velocity,
             drives=drives,
-            stability_score=stability_score,
-            unstable=False,
         )
         self.last_decision = decision
         return decision
