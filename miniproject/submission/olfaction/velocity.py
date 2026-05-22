@@ -4,7 +4,6 @@
 import numpy as np
 
 
-
 # ================================================================
 # 1. Section: Functions
 # ================================================================
@@ -12,7 +11,7 @@ def get_velocity_vector(
     lat_olfaction: np.ndarray,
     forward_velocity: float,
     max_turn_velocity: float,
-    gain: float
+    gain: float,
 ) -> np.ndarray:
     """Builds a vector with forward and yaw rate"""
     mean_odor = lat_olfaction.mean()

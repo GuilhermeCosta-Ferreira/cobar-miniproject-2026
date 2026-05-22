@@ -60,8 +60,6 @@ class Vision:
             raise KeyError(f"Missing Vision config key: {key}")
         return self.config[key]
 
-
-
     # ================================================================
     # 2. Section: Properties
     # ================================================================
@@ -90,8 +88,6 @@ class Vision:
         last_few = self.velocity_hist[-100:]
         return np.sum(last_few) != 0
 
-
-
     # ================================================================
     # 3. Section: Methods
     # ================================================================
@@ -107,41 +103,42 @@ class Vision:
 
         # 2. Builds a hsv dependent mask (isolate bright leafs)
         mask = get_hsv_mask(
-            image = frame,
-            target_hue = self.leaf_hue,
-            tolerance_hue = self.tolerance_hue,
-            tolerance_value = self.tolerance_value,
-            tolerance_saturation = self.tolerance_saturation,
-            target_saturation = self.leaf_saturation,
-            target_value = self.leaf_value,
+            image=frame,
+            target_hue=self.leaf_hue,
+            tolerance_hue=self.tolerance_hue,
+            tolerance_value=self.tolerance_value,
+            tolerance_saturation=self.tolerance_saturation,
+            target_saturation=self.leaf_saturation,
+            target_value=self.leaf_value,
         )
 
         # 3. Extract the tall objects (x, y, height)
         obstacle_centroids = get_obstacles_by_height_fast(
-            mask = mask,
-            height_threshold = self.min_height
+            mask=mask, height_threshold=self.min_height
         )
 
         if step % 500 == 0:
             self._frame_history.append(frame)
             self._mask_history.append(mask)
-            closest_centroid = max(obstacle_centroids, key=lambda c: c[2]) if len(obstacle_centroids) != 0 else []
+            closest_centroid = (
+                max(obstacle_centroids, key=lambda c: c[2])
+                if len(obstacle_centroids) != 0
+                else []
+            )
             self._centroid_history.append(closest_centroid)
             self._picture_idx_history.append(step)
 
         vision_velocity = get_velocity_vector_2(
-            image = frame,
-            centroids = obstacle_centroids,
-            current_forward_velocity = current_forward_vel,
-            gain = self.gain,
+            image=frame,
+            centroids=obstacle_centroids,
+            current_forward_velocity=current_forward_vel,
+            gain=self.gain,
         )
 
         self.vision_smooth = get_smooth_vision(
-            self.vision_smooth,
-            vision_velocity,
-            self.alpha
+            self.vision_smooth, vision_velocity, self.alpha
         )
         self._velocity_history.append(self.vision_smooth)
-        #self._velocity_history.append(vision_velocity)
+        # self._velocity_history.append(vision_velocity)
 
         return self.vision_smooth

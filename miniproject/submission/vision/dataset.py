@@ -67,8 +67,4 @@ def run_sim(
 # 2. Section: Main
 # ================================================================
 if __name__ == "__main__":
-    generate_dataset(
-        nr_iterations=50000,
-        seeds=[42],
-        file_name='failed_trial_2'
-    )
+    generate_dataset(nr_iterations=50000, seeds=[42], file_name="failed_trial_2")

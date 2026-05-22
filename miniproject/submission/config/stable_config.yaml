@@ -1,7 +1,7 @@
 name: "stable_no_hybrid_15"
 controller:
-  base_vf: 15
-  max_vt: 7
+  base_vf: 2
+  max_vt: 2
   dropoff_vt: 1.86
 
 olfaction:

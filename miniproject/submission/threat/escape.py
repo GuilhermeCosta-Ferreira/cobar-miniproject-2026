@@ -102,7 +102,10 @@ def select_escape_mode(
     if not bool(dragonfly_state.get("visible", False)) and danger_score <= 0.0:
         return "normal"
 
-    if bool(dragonfly_state.get("attack", False)) or danger_score >= cfg.panic_threshold:
+    if (
+        bool(dragonfly_state.get("attack", False))
+        or danger_score >= cfg.panic_threshold
+    ):
         return "panic_escape"
 
     if danger_score >= cfg.planned_threshold:
@@ -162,7 +165,9 @@ def compute_body_stability(
     Estimate whether the fly is upright enough to safely execute an escape burst.
     """
     body_segments = sim.fly.get_bodysegs_order()
-    body_names = [seg.name if hasattr(seg, "name") else str(seg) for seg in body_segments]
+    body_names = [
+        seg.name if hasattr(seg, "name") else str(seg) for seg in body_segments
+    ]
 
     if body_reference in body_names:
         body_idx = body_names.index(body_reference)

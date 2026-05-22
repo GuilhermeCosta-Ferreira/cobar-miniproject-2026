@@ -346,11 +346,23 @@ wheels = [
 ]
 
 [[package]]
+name = "filterpy"
+version = "1.4.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f6/1d/ac8914360460fafa1990890259b7fa5ef7ba4cd59014e782e4ab3ab144d8/filterpy-1.4.5.zip", hash = "sha256:4f2a4d39e4ea601b9ab42b2db08b5918a9538c168cff1c6895ae26646f3d73b1", size = 177985, upload-time = "2018-10-10T22:38:24.63Z" }
+
+[[package]]
 name = "flygym"
 version = "2.0.0rc0"
 source = { editable = "." }
 dependencies = [
     { name = "dm-control" },
+    { name = "filterpy" },
     { name = "imageio" },
     { name = "imageio-ffmpeg" },
     { name = "ipykernel" },
@@ -393,6 +405,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "dm-control", git = "https://github.com/google-deepmind/dm_control.git?rev=80ac24d84e7aa5bfd264948416765cb79f2c6f58" },
+    { name = "filterpy", specifier = ">=1.4.5" },
     { name = "imageio", specifier = ">=2.37,<3.0" },
     { name = "imageio-ffmpeg", specifier = "==0.6.0" },
     { name = "ipykernel", specifier = ">=7.1.0" },

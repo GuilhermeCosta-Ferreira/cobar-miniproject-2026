@@ -9,8 +9,6 @@ from flygym.examples.locomotion.cpg_network import CPGNetwork
 from flygym.examples.locomotion.preprogrammed_steps import PreprogrammedSteps
 from miniproject.simulation import MiniprojectSimulation
 
-
-
 # ================================================================
 # 1. Section: INPUTS
 # ================================================================
@@ -40,18 +38,20 @@ _correction_vectors = {
 }
 """
 _correction_vectors = {
-    "f": np.array([-0.03,  0,     0,     -0.03, 0,    0.03,  0.03]),
-    "m": np.array([-0.015, 0.001, 0.025, -0.02, 0,    -0.02, 0.0]),
-    "h": np.array([0,      0,     0,     -0.02, 0,    0.01,  -0.02]),
+    "f": np.array([-0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
+    "m": np.array([-0.015, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
+    "h": np.array([0, 0, 0, -0.02, 0, 0.01, -0.02]),
 }
 
 _right_leg_inversion = [1, -1, -1, 1, -1, 1, 1]
 _stumbling_force_threshold = -1
-_correction_rates: dict[str, tuple[int, int]] = {"retraction": (800, 700), "stumbling": (2200, 1800)}
+_correction_rates: dict[str, tuple[int, int]] = {
+    "retraction": (800, 700),
+    "stumbling": (2200, 1800),
+}
 _max_increment = 80
 _retraction_persistance = 20
 _persistance_init_thr = 20
-
 
 
 # ================================================================
@@ -70,7 +70,7 @@ class HybridTurningController:
         stumbling_force_threshold: float | int = _stumbling_force_threshold,
         stumbling_correction: np.ndarray = np.zeros(6),
         persistance_init_thr: int | float = _persistance_init_thr,
-        retraction_perisitance_counter = np.zeros(6),
+        retraction_perisitance_counter=np.zeros(6),
         retraction_persistance: int | float = _retraction_persistance,
         run_time: float = 1.0,
         max_increment: int | float = _max_increment,
@@ -138,11 +138,13 @@ class HybridTurningController:
         self.corrected_leg.append(leg_to_correct_retraction)
 
         # 2. Update the retraction persistance
-        self.retraction_perisitance_counter[self.retraction_perisitance_counter > 0] += 1
+        self.retraction_perisitance_counter[
+            self.retraction_perisitance_counter > 0
+        ] += 1
         self.retraction_perisitance_counter[
             self.retraction_perisitance_counter > self.retraction_persistance
         ] = 0
-        #self.retraction_persistance_counter_hist[:, sim._curr_step] = self.retraction_perisitance_counter
+        # self.retraction_persistance_counter_hist[:, sim._curr_step] = self.retraction_perisitance_counter
 
         # 3. Run the cpg
         self.cpg_network.step()
@@ -167,7 +169,9 @@ class HybridTurningController:
 
             # 4.4 Get target angles from CPGs and apply correction
             my_joints_angles = self.preprogrammed_steps.get_joint_angles(
-                leg, self.cpg_network.curr_phases[i], self.cpg_network.curr_magnitudes[i]
+                leg,
+                self.cpg_network.curr_phases[i],
+                self.cpg_network.curr_magnitudes[i],
             )
             net_correction = np.clip(net_correction, 0, self.max_increment)
             phase_gain = self.step_phase_multipler[leg](
@@ -190,7 +194,6 @@ class HybridTurningController:
             adhesion_onoff.append(my_adhesion_onoff)
 
         return np.array(np.concatenate(joints_angles)), np.array(adhesion_onoff)
-
 
     def retraction_rule(
         self,
@@ -218,7 +221,10 @@ class HybridTurningController:
             leg_to_correct_retraction = end_effector_z_pos_sorted_idx[-1]
 
             # 4.2. Activate persistence if correction is already strong
-            if self.retraction_correction[leg_to_correct_retraction] > self.persistance_init_thr:
+            if (
+                self.retraction_correction[leg_to_correct_retraction]
+                > self.persistance_init_thr
+            ):
                 self.retraction_perisitance_counter[leg_to_correct_retraction] = 1
         # 7. Otherwise, no leg needs retraction
         else:
@@ -230,16 +236,19 @@ class HybridTurningController:
         self,
         leg_idx: int,
         sim: MiniprojectSimulation,
-        leg_to_correct_retraction: int | None
+        leg_to_correct_retraction: int | None,
     ) -> None:
         if (
-            leg_idx == leg_to_correct_retraction or self.retraction_perisitance_counter[leg_idx] > 0
+            leg_idx == leg_to_correct_retraction
+            or self.retraction_perisitance_counter[leg_idx] > 0
         ):  # lift leg
             increment = self.correction_rates["retraction"][0] * sim.timestep
             self.retraction_correction[leg_idx] += increment
         else:  # condition no longer met, lower leg
             decrement = self.correction_rates["retraction"][1] * sim.timestep
-            self.retraction_correction[leg_idx] = max(0, self.retraction_correction[leg_idx] - decrement)
+            self.retraction_correction[leg_idx] = max(
+                0, self.retraction_correction[leg_idx] - decrement
+            )
 
     def update_stumbling_correction(
         self,
@@ -247,7 +256,9 @@ class HybridTurningController:
         leg: str,
         sim: MiniprojectSimulation,
     ) -> None:
-        contact_forces = sim.get_external_force(sim.fly.name, True)[self.stumbling_sensors[leg], :]
+        contact_forces = sim.get_external_force(sim.fly.name, True)[
+            self.stumbling_sensors[leg], :
+        ]
         fly_orientation = get_fly_orientation(sim)
         if leg not in self.force_hist:
             self.force_hist[leg] = []
@@ -260,22 +271,25 @@ class HybridTurningController:
             self.stumbling_correction[leg_idx] += increment
         else:
             decrement = self.correction_rates["stumbling"][1] * sim.timestep
-            self.stumbling_correction[leg_idx] = max(0, self.stumbling_correction[leg_idx] - decrement)
+            self.stumbling_correction[leg_idx] = max(
+                0, self.stumbling_correction[leg_idx] - decrement
+            )
 
 
 # ──────────────────────────────────────────────────────
 # 1.1 Subsection: Helper Functions
 # ──────────────────────────────────────────────────────
-def build_contact_sensor_placements(preprogrammed_steps: PreprogrammedSteps) -> list[str]:
+def build_contact_sensor_placements(
+    preprogrammed_steps: PreprogrammedSteps,
+) -> list[str]:
     return [
         f"{leg}_{segment}".lower()
         for leg in preprogrammed_steps.legs
         for segment in ["tarsus5"]
     ]
 
-def build_step_phase_initializer(
-    preprogrammed_steps: PreprogrammedSteps
-) -> dict:
+
+def build_step_phase_initializer(preprogrammed_steps: PreprogrammedSteps) -> dict:
     step_phase_multipler = {}
 
     for leg in preprogrammed_steps.legs:
@@ -297,9 +311,9 @@ def build_step_phase_initializer(
 
     return step_phase_multipler
 
+
 def build_stumbling_sensors(
-    preprogrammed_steps: PreprogrammedSteps,
-    contact_sensor_placements: list[str]
+    preprogrammed_steps: PreprogrammedSteps, contact_sensor_placements: list[str]
 ) -> dict:
     detected_segments = ["tarsus5"]
     stumbling_sensors = {leg: [] for leg in preprogrammed_steps.legs}
@@ -310,12 +324,14 @@ def build_stumbling_sensors(
             stumbling_sensors[leg].append(i)
     return {k: np.array(v) for k, v in stumbling_sensors.items()}
 
+
 def get_bodypart_pos(sim: MiniprojectSimulation, bodypart: str) -> np.ndarray:
     for idx, bs in enumerate(sim.fly.get_bodysegs_order()):
         if bs.name == bodypart:
             return sim.get_body_positions(sim.fly.name)[idx]
 
     raise ValueError(f"No bodypart with name {bodypart} found in {sim.fly.name}")
+
 
 def get_legs_pos(sim: MiniprojectSimulation, legs: list[str]) -> np.ndarray:
     legs_pos = []
@@ -324,29 +340,36 @@ def get_legs_pos(sim: MiniprojectSimulation, legs: list[str]) -> np.ndarray:
 
     return np.asarray(legs_pos)
 
+
 def get_fly_orientation(sim: MiniprojectSimulation) -> np.ndarray:
     fly_name = sim.fly.name
     body_rotations = sim.get_body_rotations(fly_name)
     bodyseg_order = sim.fly.get_bodysegs_order()
     bodyseg_names = [
-            seg.name if hasattr(seg, "name") else str(seg)
-            for seg in bodyseg_order
-        ]
-    root_name = sim.fly.root_segment.name if hasattr(sim.fly.root_segment, "name") else str(sim.fly.root_segment)
+        seg.name if hasattr(seg, "name") else str(seg) for seg in bodyseg_order
+    ]
+    root_name = (
+        sim.fly.root_segment.name
+        if hasattr(sim.fly.root_segment, "name")
+        else str(sim.fly.root_segment)
+    )
     root_idx = bodyseg_names.index(root_name)
     root_quat = body_rotations[root_idx]
     return quat_to_forward_vector(root_quat)
+
 
 def quat_to_forward_vector(q: np.ndarray | list) -> np.ndarray:
     """Convert MuJoCo quaternion [w, x, y, z] to world-frame body +x axis."""
     w, x, y, z = q
 
     # Rotation matrix, first column = rotated +x axis.
-    forward = np.array([
-        1 - 2 * (y * y + z * z),
-        2 * (x * y + w * z),
-        2 * (x * z - w * y),
-    ])
+    forward = np.array(
+        [
+            1 - 2 * (y * y + z * z),
+            2 * (x * y + w * z),
+            2 * (x * z - w * y),
+        ]
+    )
 
     norm = np.linalg.norm(forward)
     if norm < 1e-12:

@@ -17,8 +17,6 @@ from submission.periphery import SEEDS
 
 from submission.config import load_config
 
-
-
 # ================================================================
 # 1. Section: INPUTS
 # ================================================================
@@ -31,7 +29,6 @@ CONFIG: dict = load_config(BASE_CONFIG_PATH)
 RESULTS_FOLDER: Path = ROOT / "results" / CONFIG["name"]
 
 
-
 # ================================================================
 # 2. Section: FUNCTIONS
 # ================================================================
@@ -41,12 +38,14 @@ def got_to_food(sim: MiniprojectSimulation) -> bool:
     dist = np.sqrt(np.sum((fly_xy - banana_xy) ** 2))
     return dist <= 3
 
+
 def fell(sim: MiniprojectSimulation) -> bool:
     fly_body = sim.get_body_positions(sim.fly.name)[0][2]
     leg_pos = sim.get_body_positions(sim.fly.name)[-1][2]
     if fly_body < leg_pos:
         return True
     return False
+
 
 def run_sim(level, seed, success_rate):
     sim = MiniprojectSimulation(level, seed)
@@ -78,7 +77,6 @@ def run_sim(level, seed, success_rate):
     return success_rate
 
 
-
 # ================================================================
 # 3. Section: MAIN
 # ================================================================
@@ -89,8 +87,7 @@ if __name__ == "__main__":
         success_rate = {}
 
         success_rate = Parallel(n_jobs=-1)(
-            delayed(run_sim)(level, seed, success_rate)
-            for seed in tqdm.tqdm(SEEDS)
+            delayed(run_sim)(level, seed, success_rate) for seed in tqdm.tqdm(SEEDS)
         )
 
         output_path = RESULTS_FOLDER / f"sucess_rates_level_{level}.json"

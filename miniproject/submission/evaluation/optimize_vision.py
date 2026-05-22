@@ -15,8 +15,6 @@ from flygym.compose import ActuatorType
 from ..controller import Controller
 from ..config import load_config
 
-
-
 # ================================================================
 # 1. Section: INPUTS
 # ================================================================
@@ -38,7 +36,6 @@ SLOW_DOWN_RATE_LIST: list[float] = np.linspace(0.3, 0.7, 3).tolist()
 ALPHA_LIST: list[float] = np.linspace(0.01, 0.20, 3).tolist()
 
 
-
 # ================================================================
 # 2. Section: FUNCTIONS
 # ================================================================
@@ -52,11 +49,13 @@ def score_result(result: dict) -> float:
     # Faster success is better
     return 1000.0 - 0.01 * result["steps"]
 
+
 def got_to_food(sim: MiniprojectSimulation) -> bool:
     banana_xy = sim.world.banana_xy
     fly_xy = np.array(sim.get_body_positions(sim.fly.name)[0][:2])
     dist = np.sqrt(np.sum((fly_xy - banana_xy) ** 2))
     return dist <= 3
+
 
 def fell(sim: MiniprojectSimulation) -> bool:
     fly_body = sim.get_body_positions(sim.fly.name)[0][2]
@@ -64,6 +63,7 @@ def fell(sim: MiniprojectSimulation) -> bool:
     if fly_body < leg_pos:
         return True
     return False
+
 
 def run_sim(
     level: int,
@@ -86,9 +86,7 @@ def run_sim(
 
     for step in range(MAX_NUM_STEPS):
         if got_to_food(sim):
-            print(
-                f"Got to goal in {step} timesteps. "
-            )
+            print(f"Got to goal in {step} timesteps. ")
             result["success"] = True
             result["steps"] = step
             return result
@@ -97,9 +95,7 @@ def run_sim(
             fell_count += 1
 
         if fell_count > 1000:
-            print(
-                f"Fly fell at step {step}. "
-            )
+            print(f"Fly fell at step {step}. ")
             result["fell"] = True
             result["steps"] = step
             return result
@@ -119,11 +115,10 @@ def run_sim(
 
         sim.step()
 
-    print(
-        f"Took too long, reached {MAX_NUM_STEPS} steps. "
-    )
+    print(f"Took too long, reached {MAX_NUM_STEPS} steps. ")
     result["steps"] = MAX_NUM_STEPS
     return result
+
 
 def build_config_from_trial(trial: optuna.Trial) -> dict:
     config = load_config(BASE_CONFIG_PATH)
@@ -144,6 +139,7 @@ def build_config_from_trial(trial: optuna.Trial) -> dict:
         raise optuna.TrialPruned()
 
     return config
+
 
 def objective(trial: optuna.Trial) -> float:
     config = build_config_from_trial(trial)

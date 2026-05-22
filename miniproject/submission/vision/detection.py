@@ -83,9 +83,11 @@ def is_flipped(
 
     return mask_center_y < image_center_y
 
+
 # ──────────────────────────────────────────────────────
 # Dragonfly attack detection
 # ──────────────────────────────────────────────────────
+
 
 def to_uint8_rgb(img: np.ndarray) -> np.ndarray:
     """
@@ -102,7 +104,9 @@ def to_uint8_rgb(img: np.ndarray) -> np.ndarray:
     return img
 
 
-def stack_raw_vision(raw_vision: list[np.ndarray] | tuple[np.ndarray, ...]) -> np.ndarray:
+def stack_raw_vision(
+    raw_vision: list[np.ndarray] | tuple[np.ndarray, ...],
+) -> np.ndarray:
     """
     Concatenate the fly's raw vision images into one panel.
 
@@ -239,7 +243,9 @@ def dragonfly_red_features_from_raw_vision(
     hue = hsv[..., 0]
     sat = hsv[..., 1]
     val = hsv[..., 2]
-    hsv_mask = ((hue <= 10) | (hue >= 170)) & (sat >= hsv_sat_min) & (val >= hsv_val_min)
+    hsv_mask = (
+        ((hue <= 10) | (hue >= 170)) & (sat >= hsv_sat_min) & (val >= hsv_val_min)
+    )
 
     red_mask = dominance_mask | hsv_mask
     mask = np.ascontiguousarray(red_mask.astype(np.uint8))
@@ -310,9 +316,6 @@ def detect_dragonfly_attack_from_raw_vision(
     return attack_detected, score
 
 
-
-
-
 # ================================================================
 # 3. Section: MAIN
 # ================================================================
@@ -338,9 +341,7 @@ if __name__ == "__main__":
         print()
 
         signals = get_signals_from_centroids(
-            obstacle_centroids,
-            np.asarray(img.shape),
-            turn_gain=1
+            obstacle_centroids, np.asarray(img.shape), turn_gain=1
         )
 
         img = prepare_image_for_png(img)
