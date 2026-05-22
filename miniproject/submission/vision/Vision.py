@@ -9,7 +9,7 @@ from miniproject.simulation import MiniprojectSimulation
 from .visualize import produce_human_view
 from .hsv import get_hsv_mask
 from .obstacles import get_obstacles_by_height_fast
-from .velocity import get_velocity_vector_2
+from .velocity import get_velocity_vector
 from .signal_processing import get_smooth_vision
 
 
@@ -129,10 +129,11 @@ class Vision:
             self._centroid_history.append(closest_centroid)
             self._picture_idx_history.append(step)
 
-        vision_velocity = get_velocity_vector_2(
+        vision_velocity = get_velocity_vector(
             image = frame,
             centroids = obstacle_centroids,
             current_forward_velocity = current_forward_vel,
+            slow_down_rate=self.slow_down_rate,
             gain = self.gain,
         )
 
@@ -142,6 +143,5 @@ class Vision:
             self.alpha
         )
         self._velocity_history.append(self.vision_smooth)
-        #self._velocity_history.append(vision_velocity)
 
         return self.vision_smooth

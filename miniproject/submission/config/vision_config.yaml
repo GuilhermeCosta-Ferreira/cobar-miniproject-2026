@@ -8,10 +8,10 @@ olfaction:
   gain: 5
 
 vision:
-  min_height: 200 #300
+  min_height: 200
   scare_height: 405
-  gain: 2.5 #1.5X
-  slow_down_rate: 0.06
+  gain: 2.5
+  slow_down_rate: 0.2
   alpha: 0.5
   leaf_hue: 120
   leaf_saturation: 0.95
