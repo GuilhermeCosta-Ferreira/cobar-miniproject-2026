@@ -23,7 +23,7 @@ from ..config import load_config
 MAX_NUM_STEPS: int = 100_000
 LEVEL: int = 2
 SEED: int = 1
-N_TRIAL_WORKERS: int = min(8, os.cpu_count())
+N_TRIAL_WORKERS: int = 1
 
 ROOT: Path = Path(__file__).resolve().parent
 RESULTS_FOLDER: Path = ROOT / "optimization_results"

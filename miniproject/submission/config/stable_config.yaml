@@ -1,3 +1,4 @@
+name: "stable_no_hybrid_15"
 controller:
   base_vf: 15
   max_vt: 7
