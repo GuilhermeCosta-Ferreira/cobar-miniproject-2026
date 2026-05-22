@@ -215,7 +215,7 @@ class Wind:
     def process_wind(
         self,
         antenna_data: dict[str, dict[str, np.ndarray]],
-        magnitude_threshold: float = 50_000,
+        magnitude_threshold: float = 100_000,
     ) -> np.ndarray:
         """Run the full wind-sensing pipeline and return a motor drive signal.
 

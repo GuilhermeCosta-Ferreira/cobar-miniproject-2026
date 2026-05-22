@@ -159,7 +159,7 @@ class Controller:
         # WIND
         wind = sim.get_antenna_data(sim.fly.name)
         wind_velocity, wind_adhesion = self.wind.process_wind(wind)
-        # self.add_adhesion(wind_adhesion)
+        self.add_adhesion(wind_adhesion)
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
         dragonfly_state = DEFAULT_DRAGONFLY_STATE.copy()
@@ -221,7 +221,7 @@ class Controller:
                 max_turn=escape_config.panic_max_turn_velocity,
             )
         else:
-            velocity = odor_velocity + vision_velocity  # + wind_velocity
+            velocity = odor_velocity + vision_velocity  + wind_velocity
             velocity = drifter(
                 current_velocity=velocity,
                 dropoff_vt=self.dropoff_vt,
