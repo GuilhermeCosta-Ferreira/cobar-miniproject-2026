@@ -13,8 +13,11 @@ from .wind import Wind
 from .olfaction import Olfaction
 from .vision import Vision
 from .threat import DEFAULT_DRAGONFLY_STATE, DragonflyAttackDetector, EscapeController
+from .config import load_config
 
 MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
+CONFIG_PATH = Path(__file__).resolve().parent / "config" / "vision_config.yaml"
+CONFIG = load_config(CONFIG_PATH)
 
 
 
@@ -25,7 +28,7 @@ class Controller:
     def __init__(
         self,
         sim: MiniprojectSimulation,
-        config: dict,
+        config: dict = CONFIG,
     ):
         self.config = config
 
