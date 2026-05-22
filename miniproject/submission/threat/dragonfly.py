@@ -1,6 +1,30 @@
 import numpy as np
 
+from dataclasses import dataclass
+
 from ..vision.detection import dragonfly_red_features_from_raw_vision
+
+
+DEFAULT_DRAGONFLY_STATE: dict[str, float | bool] = {
+    "visible": False,
+    "attack": False,
+    "red_score": 0.0,
+    "largest_blob_frac": 0.0,
+    "looming": 0.0,
+    "side_bias": 0.0,
+}
+
+
+@dataclass(frozen=True)
+class DragonflyDetectorConfig:
+    visible_threshold: float = 0.0003
+    visible_blob_threshold: float = 0.0005
+    attack_threshold: float = 0.008
+    blob_threshold: float = 0.002
+    looming_threshold: float = 0.00045
+    watch_hold_seconds: float = 1.5
+    attack_hold_seconds: float = 0.3
+    min_consecutive_hits: int = 1
 
 
 class DragonflyAttackDetector:
@@ -11,14 +35,14 @@ class DragonflyAttackDetector:
 
     def __init__(
         self,
-        visible_threshold: float = 0.001,
-        visible_blob_threshold: float = 0.0005,
-        attack_threshold: float = 0.04,
-        blob_threshold: float = 0.02,
-        looming_threshold: float = 0.004,
+        visible_threshold: float = DragonflyDetectorConfig.visible_threshold,
+        visible_blob_threshold: float = DragonflyDetectorConfig.visible_blob_threshold,
+        attack_threshold: float = DragonflyDetectorConfig.attack_threshold,
+        blob_threshold: float = DragonflyDetectorConfig.blob_threshold,
+        looming_threshold: float = DragonflyDetectorConfig.looming_threshold,
         watch_hold_steps: int = 2000,
         hold_steps: int = 0,
-        min_consecutive_hits: int = 1,
+        min_consecutive_hits: int = DragonflyDetectorConfig.min_consecutive_hits,
     ):
         self.visible_threshold = visible_threshold
         self.visible_blob_threshold = visible_blob_threshold
@@ -38,6 +62,25 @@ class DragonflyAttackDetector:
         self.current_visible = False
         self.current_attack = False
         self.current_side_bias = 0.0
+        self.attack_has_triggered = False
+
+    @classmethod
+    def from_timestep(
+        cls,
+        timestep: float,
+        config: DragonflyDetectorConfig | None = None,
+    ) -> "DragonflyAttackDetector":
+        cfg = config or DragonflyDetectorConfig()
+        return cls(
+            visible_threshold=cfg.visible_threshold,
+            visible_blob_threshold=cfg.visible_blob_threshold,
+            attack_threshold=cfg.attack_threshold,
+            blob_threshold=cfg.blob_threshold,
+            looming_threshold=cfg.looming_threshold,
+            watch_hold_steps=int(cfg.watch_hold_seconds / timestep),
+            hold_steps=int(cfg.attack_hold_seconds / timestep),
+            min_consecutive_hits=cfg.min_consecutive_hits,
+        )
 
     def update(
         self,
@@ -67,8 +110,6 @@ class DragonflyAttackDetector:
             if side_bias != 0:
                 self.current_side_bias = side_bias
 
-        self.current_visible = visible_cue or current_step < self.visible_memory_until
-
         if attack_cue:
             self.consecutive_hits += 1
         else:
@@ -78,12 +119,21 @@ class DragonflyAttackDetector:
 
         if threshold_reached and self.hold_steps <= 0:
             self.current_attack = True
+            self.attack_has_triggered = True
+            self.current_visible = visible_cue or current_step < self.visible_memory_until
             return self.current_attack
 
         if threshold_reached:
             self.attack_memory_until = current_step + self.hold_steps
 
         self.current_attack = current_step < self.attack_memory_until
+        if self.current_attack:
+            self.attack_has_triggered = True
+
+        if self.attack_has_triggered and not self.current_attack and not visible_cue:
+            self.visible_memory_until = -1
+
+        self.current_visible = visible_cue or current_step < self.visible_memory_until
 
         return self.current_attack
 

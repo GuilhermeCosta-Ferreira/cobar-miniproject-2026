@@ -9,7 +9,7 @@ from miniproject.simulation import MiniprojectSimulation
 from .visualize import produce_human_view
 from .hsv import get_hsv_mask
 from .obstacles import get_obstacles_by_height_fast
-from .velocity import get_velocity_vector_2
+from .velocity import get_velocity_vector
 from .signal_processing import get_smooth_vision
 
 
@@ -20,6 +20,7 @@ from .signal_processing import get_smooth_vision
 class Vision:
     config: dict
     vision_smooth: np.ndarray = field(default_factory=lambda: np.zeros(2))
+    current_signal: np.ndarray = field(default_factory=lambda: np.zeros(2))
 
     min_height: float = field(init=False)
     scare_height: float = field(init=False)
@@ -128,17 +129,22 @@ class Vision:
             self._centroid_history.append(closest_centroid)
             self._picture_idx_history.append(step)
 
-        vision_velocity = get_velocity_vector_2(
-            image=frame,
-            centroids=obstacle_centroids,
-            current_forward_velocity=current_forward_vel,
-            gain=self.gain,
+        vision_velocity = get_velocity_vector(
+            image = frame,
+            centroids = obstacle_centroids,
+            current_forward_velocity = current_forward_vel,
+            slow_down_rate=self.slow_down_rate,
+            gain = self.gain,
         )
 
         self.vision_smooth = get_smooth_vision(
             self.vision_smooth, vision_velocity, self.alpha
         )
         self._velocity_history.append(self.vision_smooth)
-        # self._velocity_history.append(vision_velocity)
+        self.current_signal = self.vision_smooth
 
         return self.vision_smooth
+
+    def update_dragonfly_state(self, score: float, attack: bool) -> None:
+        self.current_dragonfly_score = float(score)
+        self.current_dragonfly_attack = bool(attack)

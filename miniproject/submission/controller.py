@@ -12,7 +12,7 @@ from .hybrid_controller import HybridTurningController
 from .wind import Wind
 from .olfaction import Olfaction
 from .vision import Vision
-from .threat import DragonflyAttackDetector, EscapeController
+from .threat import DEFAULT_DRAGONFLY_STATE, DragonflyAttackDetector, EscapeController
 
 MODEL_PATH = (
     Path(__file__).resolve().parent
@@ -35,6 +35,7 @@ class Controller:
 
         self.base_vf = config["controller"]["base_vf"]
         self.max_vt = config["controller"]["max_vt"]
+        self.max_vf = config["controller"]["max_vf"]
         self.dropoff_vt = config["controller"]["dropoff_vt"]
 
         self.olfaction_gain = config["olfaction"]["gain"]
@@ -101,21 +102,14 @@ class Controller:
         self.dragonfly_mode = "normal"
         self.dragonfly_danger_score = 0.0
         self.dragonfly_escape_direction = 0.0
-        self.stability_score = 1.0
-        self.is_unstable = False
-        self.dragonfly_detector = DragonflyAttackDetector(
-            visible_threshold=0.0003,
-            visible_blob_threshold=0.0005,
-            attack_threshold=0.004,
-            blob_threshold=0.001,
-            looming_threshold=0.00025,
-            watch_hold_steps=int(1.5 / sim.timestep),
-            hold_steps=int(0.35 / sim.timestep),
-            min_consecutive_hits=1,
-        )
+        self.dragonfly_detector = DragonflyAttackDetector.from_timestep(sim.timestep)
         self.escape_controller = EscapeController()
+        self.current_escape_decision = self.escape_controller.last_decision
 
         self.current_drive = [0.0, 0.0]
+        self.current_velocity = np.array([0.0, 0.0])
+        self.wind_velocity = np.array([0.0, 0.0])
+        self.obstacle_velocity = np.array([0.0, 0.0])
         self.inverse_model = load(MODEL_PATH)
 
         signal_20 = self.inverse_model.predict(np.array([np.array([20, 0])]))[0]
@@ -190,7 +184,7 @@ class Controller:
         self._drive_history.append(drives)
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
-        """
+        dragonfly_state = DEFAULT_DRAGONFLY_STATE.copy()
         dragonfly_state = self.dragonfly_detector.detect_state_from_raw_vision(
             raw_vision=sim.get_raw_vision(sim.fly.name),
             current_step=current_step,
@@ -207,28 +201,62 @@ class Controller:
         )
 
         escape_decision = self.escape_controller.step(sim, dragonfly_state)
+        self.current_escape_decision = escape_decision
         self.dragonfly_mode = escape_decision.mode
         self.dragonfly_danger_score = escape_decision.danger_score
         self.dragonfly_escape_direction = escape_decision.direction
-        self.stability_score = escape_decision.stability_score
-        self.is_unstable = escape_decision.unstable
+        escape_config = self.escape_controller.config
 
-        if escape_decision.mode == "recovery":
-            control_signals = (escape_decision.drives + drives)
-            control_signals = adapt_drives(control_signals, max_signal=1.0)
-        elif escape_decision.mode != "normal":
-            # During dragonfly danger, odor pursuit is suppressed so the fly does
-            # not turn away from a visible threat just to follow the banana plume.
-            control_signals = (escape_decision.drives + drives)
-            max_signal = 2.3 if escape_decision.mode == "panic_escape" else 1.6
-            control_signals = keep_escape_drives_forward(
-                control_signals,
-                escape_decision.mode,
+        # VISION - obstacles. During dragonfly danger, obstacle vision is forced
+        # on so a burst cannot ignore grass just because the normal gate is idle.
+        vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
+        self.obstacle_velocity = vision_velocity
+
+        if escape_decision.mode == "watch":
+            # Walk cautiously while visible danger is far away, but keep the turn
+            # sign aligned with normal odor tracking.
+            watch_velocity = escape_decision.velocity.copy()
+            watch_velocity[1] = escape_config.watch_odor_turn_gain * odor_velocity[1]
+            velocity = (
+                watch_velocity
+                + escape_config.watch_obstacle_gain * vision_velocity
+                + escape_config.watch_wind_gain * wind_velocity
             )
-            control_signals = adapt_drives(control_signals, max_signal=max_signal)
+            velocity = adapt_velocity(
+                velocity,
+                max_forward=escape_config.watch_max_forward_velocity,
+                max_turn=escape_config.watch_max_turn_velocity,
+            )
+        elif escape_decision.mode == "panic_escape":
+            # Odor pursuit is suppressed during danger, but obstacle avoidance and
+            # wind compensation still shape the escape vector.
+            burst_velocity = escape_decision.velocity.copy()
+            burst_velocity[1] = escape_config.panic_odor_turn_gain * odor_velocity[1]
+            velocity = (
+                burst_velocity
+                + escape_config.burst_obstacle_gain * vision_velocity
+                + escape_config.burst_wind_gain * wind_velocity
+            )
+            velocity = adapt_velocity(
+                velocity,
+                max_forward=escape_config.panic_max_forward_velocity,
+                max_turn=escape_config.panic_max_turn_velocity,
+            )
         else:
-            control_signals = drives
-        """
+            velocity = odor_velocity + vision_velocity + wind_velocity
+            velocity = drifter(
+                current_velocity = velocity,
+                dropoff_vt = self.dropoff_vt,
+                max_vt = self.max_vt,
+                max_vf = self.max_vf
+            )
+
+        self.current_velocity = velocity
+        self._velocity_history.append(velocity)
+
+        drives = self.inverse_model.predict(np.array([velocity]))[0]
+        self.current_drive = drives
+        self._drive_history.append(drives)
 
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
         adhesion = np.maximum(adhesion, self._adhesion_buffer)
@@ -243,11 +271,12 @@ def drifter(
     current_velocity: np.ndarray,
     dropoff_vt: float,
     max_vt: float,
+    max_vf: float
 ) -> np.ndarray:
     current_vf = current_velocity[0]
     current_vt = current_velocity[1]
 
-    current_vf = np.min([current_vf, 20])
+    current_vf = np.min([current_vf, max_vf])
 
     vt_abs = abs(current_vt)
 
@@ -275,16 +304,28 @@ def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
         return drives
 
     return drives / max_abs * max_signal
+def adapt_velocity(
+    velocity: np.ndarray,
+    max_forward: float = 15.0,
+    max_turn: float = 6.0,
+) -> np.ndarray:
+    velocity = np.asarray(velocity, dtype=float)
+    return np.array(
+        [
+            np.clip(velocity[0], -0.5 * max_forward, max_forward),
+            np.clip(velocity[1], -max_turn, max_turn),
+        ],
+        dtype=float,
+    )
 
 
-def keep_escape_drives_forward(drives: np.ndarray, mode: str) -> np.ndarray:
-    drives = np.asarray(drives, dtype=float)
+def wind_signal_to_velocity(
+    wind_signal: np.ndarray,
+    forward_gain: float = 2.0,
+    turn_gain: float = 1.2,
+) -> np.ndarray:
+    wind_signal = np.asarray(wind_signal, dtype=float)
+    forward_velocity = forward_gain * np.mean(wind_signal)
+    rotational_velocity = turn_gain * (wind_signal[1] - wind_signal[0])
 
-    min_drive_by_mode = {
-        "watch": 0.15,
-        "planned_escape": 0.55,
-        "panic_escape": 1.05,
-    }
-    min_drive = min_drive_by_mode.get(mode, 0.0)
-
-    return np.maximum(drives, min_drive)
+    return np.array([forward_velocity, rotational_velocity], dtype=float)

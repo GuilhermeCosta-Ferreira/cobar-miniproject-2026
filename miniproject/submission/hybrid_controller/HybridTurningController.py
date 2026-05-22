@@ -23,20 +23,6 @@ _tripod_phase_biases = np.pi * np.array(
     ]
 )
 _tripod_coupling_weights = (_tripod_phase_biases > 0) * 10
-"""
-_correction_vectors = {
-    # "leg pos": (Coxa, Coxa_roll, Coxa_yaw, Femur, Femur_roll, Tibia, Tarsus1)
-    # unit: radian
-    "f": np.array([0, 0, 0, 0, 0, 0, 0]),
-    "m": np.array([0, 0, 0, 0, 0, 0, 0]),
-    "h": np.array([0, 0, 0, 0, 0, 0, 0]),
-}
-_correction_vectors = {
-    "f": np.array([0.0, 0.0, 0.0, 0.004, 0.0, -0.004, 0.0]),
-    "m": np.array([0.0, 0.0, 0.0, 0.004, 0.0, -0.004, 0.0]),
-    "h": np.array([0.0, 0.0, 0.0, 0.004, 0.0, -0.004, 0.0]),
-}
-"""
 _correction_vectors = {
     "f": np.array([-0.03, 0, 0, -0.03, 0, 0.03, 0.03]),
     "m": np.array([-0.015, 0.001, 0.025, -0.02, 0, -0.02, 0.0]),
@@ -82,7 +68,7 @@ class HybridTurningController:
     ):
         self.preprogrammed_steps = PreprogrammedSteps()
         self.intrinsic_freqs = intrinsic_freqs
-        self.timestep = 1e-4
+        self.timestep = timestep
         self.correction_rates = correction_rates
         self.stumbling_force_threshold = stumbling_force_threshold
         self.stumbling_correction = stumbling_correction
