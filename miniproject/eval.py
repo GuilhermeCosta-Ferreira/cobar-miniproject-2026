@@ -15,6 +15,8 @@ from submission.controller import Controller
 from flygym.compose import ActuatorType
 from submission.periphery import SEEDS
 
+from submission.config import load_config
+
 
 
 # ================================================================
@@ -22,7 +24,11 @@ from submission.periphery import SEEDS
 # ================================================================
 MAX_NUM_STEPS: int = 100_000
 LEVELS: list[int] = [1, 2, 3, 4]
-RESULTS_FOLDER: Path = Path("eval_test")
+
+ROOT: Path = Path(__file__).resolve().parent / "submission"
+BASE_CONFIG_PATH: Path = ROOT / "config" / "stable_config.yaml"
+CONFIG: dict = load_config(BASE_CONFIG_PATH)
+RESULTS_FOLDER: Path = ROOT / "results" / CONFIG["name"]
 
 
 
@@ -44,7 +50,7 @@ def fell(sim: MiniprojectSimulation) -> bool:
 
 def run_sim(level, seed, success_rate):
     sim = MiniprojectSimulation(level, seed)
-    controller = Controller(sim)
+    controller = Controller(sim, CONFIG)
 
     fell_count = 0
     for step in range(MAX_NUM_STEPS):

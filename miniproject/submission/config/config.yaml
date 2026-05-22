@@ -1,11 +1,7 @@
-simulation:
-  seed: 42
-  n_steps: 20000
-
 controller:
   base_vf: 10
   max_vt: 7
-  dropoff_vt: 5
+  dropoff_vt: 1.86
 
 olfaction:
   gain: 5
@@ -23,24 +19,24 @@ hybrid:
   f:
     coxa_lift: 0.0
     coxa_roll: 0.0
-    coxa_yaw: 0.0
-    femur_lift: 0.0
+    coxa_yaw: -0.00085
+    femur_lift: 0.02592
     femur_roll: 0.0
-    tibia_lift: 0.0
-    tarsus1_lift: 0.0
+    tibia_lift: -0.02022
+    tarsus1_lift: -0.00198
   m:
     coxa_lift: 0.0
     coxa_roll: 0.0
-    coxa_yaw: 0.0
-    femur_lift: 0.0
+    coxa_yaw: -0.00482
+    femur_lift: -0.01554
     femur_roll: 0.0
-    tibia_lift: 0.0
-    tarsus1_lift: 0.0
+    tibia_lift: 0.02811
+    tarsus1_lift: 0.01727
   h:
     coxa_lift: 0.0
     coxa_roll: 0.0
-    coxa_yaw: 0.0
-    femur_lift: 0.0
+    coxa_yaw: -0.01263
+    femur_lift: 0.02018
     femur_roll: 0.0
-    tibia_lift: 0.0
-    tarsus1_lift: 0.0
+    tibia_lift: 0.01973
+    tarsus1_lift: -0.00163
