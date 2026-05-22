@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from miniproject.simulation import MiniprojectSimulation
 
 from .visualize import produce_human_view
-from .hsv import get_hsv_mask_fast
+from .hsv import get_hsv_mask
 from .obstacles import get_obstacles_by_height_fast
-from .velocity import get_velocity_vector
+from .velocity import get_velocity_vector_2
 from .signal_processing import get_smooth_vision
 
 
@@ -18,12 +18,20 @@ from .signal_processing import get_smooth_vision
 # ================================================================
 @dataclass
 class Vision:
+    config: dict
     vision_smooth: np.ndarray = field(default_factory=lambda: np.zeros(2))
 
-    target_hue: float = 120.0
-    tolerance_hue: float = 5.0
-    min_saturation: float = 0.3
-    min_value: float = 0.79
+    min_height: float = field(init=False)
+    scare_height: float = field(init=False)
+    gain: float = field(init=False)
+    slow_down_rate: float = field(init=False)
+    alpha: float = field(init=False)
+    leaf_hue: float = field(init=False)
+    leaf_saturation: float = field(init=False)
+    leaf_value: float = field(init=False)
+    tolerance_hue: float = field(init=False)
+    tolerance_value: float = field(init=False)
+    tolerance_saturation: float = field(init=False)
 
     current_dragonfly_score: float = 0.0
     current_dragonfly_attack: bool = False
@@ -32,6 +40,25 @@ class Vision:
     _centroid_history: list = field(default_factory=list)
     _mask_history: list = field(default_factory=list)
     _frame_history: list = field(default_factory=list)
+    _picture_idx_history: list = field(default_factory=list)
+
+    def __post_init__(self):
+        self.min_height = float(self._get_required("min_height"))
+        self.scare_height = float(self._get_required("scare_height"))
+        self.gain = float(self._get_required("gain"))
+        self.slow_down_rate = float(self._get_required("slow_down_rate"))
+        self.alpha = float(self._get_required("alpha"))
+        self.leaf_hue = float(self._get_required("leaf_hue"))
+        self.leaf_saturation = float(self._get_required("leaf_saturation"))
+        self.leaf_value = float(self._get_required("leaf_value"))
+        self.tolerance_hue = float(self._get_required("tolerance_hue"))
+        self.tolerance_value = float(self._get_required("tolerance_value"))
+        self.tolerance_saturation = float(self._get_required("tolerance_saturation"))
+
+    def _get_required(self, key: str):
+        if key not in self.config:
+            raise KeyError(f"Missing Vision config key: {key}")
+        return self.config[key]
 
 
 
@@ -55,6 +82,10 @@ class Vision:
         return np.asarray(self._frame_history)
 
     @property
+    def picture_idx_hist(self):
+        return np.asarray(self._picture_idx_history)
+
+    @property
     def is_active(self) -> bool:
         last_few = self.velocity_hist[-100:]
         return np.sum(last_few) != 0
@@ -68,12 +99,6 @@ class Vision:
         self,
         sim: MiniprojectSimulation,
         current_forward_vel: float,
-        min_height: float,
-        scary_height: float,
-        gain: float,
-        slow_down_rate: float,
-        max_vt: float,
-        alpha: float,
     ) -> np.ndarray:
         step = sim._curr_step
 
@@ -81,38 +106,42 @@ class Vision:
         frame = produce_human_view(sim)
 
         # 2. Builds a hsv dependent mask (isolate bright leafs)
-        mask = get_hsv_mask_fast(
+        mask = get_hsv_mask(
             image = frame,
-            target_hue = self.target_hue,
+            target_hue = self.leaf_hue,
             tolerance_hue = self.tolerance_hue,
-            min_saturation = self.min_saturation,
-            min_value = self.min_value,
+            tolerance_value = self.tolerance_value,
+            tolerance_saturation = self.tolerance_saturation,
+            target_saturation = self.leaf_saturation,
+            target_value = self.leaf_value,
         )
 
         # 3. Extract the tall objects (x, y, height)
         obstacle_centroids = get_obstacles_by_height_fast(
             mask = mask,
-            height_threshold = min_height
+            height_threshold = self.min_height
         )
 
-        if step % 5000 == 0:
+        if step % 500 == 0:
             self._frame_history.append(frame)
             self._mask_history.append(mask)
             closest_centroid = max(obstacle_centroids, key=lambda c: c[2]) if len(obstacle_centroids) != 0 else []
             self._centroid_history.append(closest_centroid)
+            self._picture_idx_history.append(step)
 
-        vision_velocity = get_velocity_vector(
+        vision_velocity = get_velocity_vector_2(
             image = frame,
             centroids = obstacle_centroids,
             current_forward_velocity = current_forward_vel,
-            max_turn_velocity = max_vt,
-            scary_height = scary_height,
-            gain = gain,
-            slow_down_rate = slow_down_rate
+            gain = self.gain,
         )
 
-        self.vision_smooth = get_smooth_vision(self.vision_smooth, vision_velocity, alpha)
-
+        self.vision_smooth = get_smooth_vision(
+            self.vision_smooth,
+            vision_velocity,
+            self.alpha
+        )
         self._velocity_history.append(self.vision_smooth)
+        #self._velocity_history.append(vision_velocity)
 
         return self.vision_smooth

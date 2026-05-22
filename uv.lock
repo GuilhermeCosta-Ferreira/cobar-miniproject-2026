@@ -359,6 +359,7 @@ dependencies = [
     { name = "jaxtyping" },
     { name = "joblib" },
     { name = "matplotlib" },
+    { name = "matplotlib-tufte" },
     { name = "mediapy" },
     { name = "mujoco" },
     { name = "numba" },
@@ -399,6 +400,7 @@ requires-dist = [
     { name = "jaxtyping", specifier = "==0.3.7" },
     { name = "joblib", specifier = ">=1.5.3" },
     { name = "matplotlib", specifier = ">=3.10,<4.0" },
+    { name = "matplotlib-tufte", git = "https://github.com/ninivert/matplotlib_tufte.git" },
     { name = "mediapy", specifier = ">=1.2,<3.0" },
     { name = "mujoco", specifier = ">=3.5,<3.6" },
     { name = "mujoco-warp", marker = "extra == 'warp'", specifier = ">=3.5,<3.6" },
@@ -893,6 +895,14 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c7/74/97e72a36efd4ae2bccb3463284300f8953f199b5ffbc04cbbb0ec78f74b1/matplotlib_inline-0.2.1.tar.gz", hash = "sha256:e1ee949c340d771fc39e241ea75683deb94762c8fa5f2927ec57c83c4dffa9fe", size = 8110, upload-time = "2025-10-23T09:00:22.126Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/af/33/ee4519fa02ed11a94aef9559552f3b17bb863f2ecfe1a35dc7f548cde231/matplotlib_inline-0.2.1-py3-none-any.whl", hash = "sha256:d56ce5156ba6085e00a9d54fead6ed29a9c47e215cd1bba2e976ef39f5710a76", size = 9516, upload-time = "2025-10-23T09:00:20.675Z" },
+]
+
+[[package]]
+name = "matplotlib-tufte"
+version = "0.2.1"
+source = { git = "https://github.com/ninivert/matplotlib_tufte.git#7247f2cca514fbab8a82ef2c5d54d776790e2fc5" }
+dependencies = [
+    { name = "matplotlib" },
 ]
 
 [[package]]

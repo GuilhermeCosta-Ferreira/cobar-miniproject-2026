@@ -42,6 +42,7 @@ dependencies = [
     "opencv-python>=4.13.0.92",
     "pygame>=2.6.1",
     "optuna>=4.8.0",
+    "matplotlib-tufte",
 ]
 
 [project.optional-dependencies]
@@ -70,6 +71,9 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 flygym = ["assets/**"]
+
+[tool.uv.sources]
+matplotlib-tufte = { git = "https://github.com/ninivert/matplotlib_tufte.git" }
 
 [dependency-groups]
 dev = [

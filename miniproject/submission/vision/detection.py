@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .unpack import prepare_image_for_png
 from .obstacles import get_obstacles_by_height_fast, get_signals_from_centroids
-from .hsv import convert_to_hsv, hue_to_degree, get_hsv_values, get_hsv_mask_fast
+from .hsv import convert_to_hsv, hue_to_degree, get_hsv_values, get_hsv_mask
 
 LEAF_COLOR: str = "#00E500"
 DATASET_PATH: Path = Path(
@@ -31,12 +31,12 @@ def obstacle_by_hue(
     turn_gain: float = 1.5,
 ) -> np.ndarray:
     # 1. Builds a hsv dependent mask (isolate bright leafs)
-    mask = get_hsv_mask_fast(
+    mask = get_hsv_mask(
         image=image,
         target_hue=target_hue,
         tolerance_hue=tolerance_hue,
-        min_saturation=min_saturation,
-        min_value=min_value,
+        target_saturation=min_saturation,
+        target_value=min_value,
     )
 
     # 2. Extract the tall objects (closer)
@@ -326,9 +326,9 @@ if __name__ == "__main__":
         mask = get_hsv_mask_fast(
             image=img,
             target_hue=120,
-            tolerance_hue=5,
-            min_saturation=0.3,
-            min_value=0.8,
+            tolerance=5,
+            target_saturation=0.3,
+            target_value=0.8,
         )
 
         obstacle_centroids = get_obstacles_by_height_fast(mask, 100)

@@ -35,11 +35,7 @@ class Controller:
 
         self.olfaction_gain = config["olfaction"]["gain"]
 
-        self.min_height = config["vision"]["min_height"]
-        self.scare_height = config["vision"]["scare_height"]
-        self.vision_gain = config["vision"]["gain"]
-        self.slow_down_rate = config["vision"]["slow_down_rate"]
-        self.vision_alpha = config["vision"]["alpha"]
+
 
         hybrid_cfg = config["hybrid"]
         f_cfg = hybrid_cfg["f"]
@@ -84,7 +80,7 @@ class Controller:
         )
         self.olfaction = Olfaction()
         self.wind = Wind(sim.mj_model)
-        self.vision = Vision()
+        self.vision = Vision(config["vision"])
 
         self.dragonfly_visible = False
         self.dragonfly_attack = False
@@ -166,16 +162,10 @@ class Controller:
 
         # VISION
         vision_velocity = np.array([0.0, 0.0])
-        if ((current_step > 5e3) or self.vision.is_active) and sim.enable_grass:
+        if sim.enable_grass:
             vision_velocity = self.vision.obstacle_to_velocity(
                 sim = sim,
                 current_forward_vel = odor_velocity[0],
-                min_height = self.min_height,
-                scary_height = self.scare_height,
-                gain = self.vision_gain,
-                slow_down_rate = self.slow_down_rate,
-                max_vt = self.max_vt,
-                alpha = self.vision_alpha
             )
 
         velocity = odor_velocity + vision_velocity
@@ -244,6 +234,8 @@ def drifter(
 ) -> np.ndarray:
     current_vf = current_velocity[0]
     current_vt = current_velocity[1]
+
+    current_vf = np.min([current_vf, 20])
 
     vt_abs = abs(current_vt)
 

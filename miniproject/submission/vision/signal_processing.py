@@ -17,7 +17,5 @@ def get_smooth_vision(
     if olfaction_smooth is None:
         olfaction_smooth = signal
     else:
-        olfaction_smooth = (
-            1 - alpha
-        ) * olfaction_smooth + alpha * signal
+        olfaction_smooth = (1 - alpha) * olfaction_smooth + alpha * signal
     return olfaction_smooth
