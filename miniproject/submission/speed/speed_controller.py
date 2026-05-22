@@ -15,7 +15,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 
 from .utils import LEG_NAMES, run_simulation
-from ..hybrid_controller import HybridTurningController
+from ..gait import HybridTurningController
 
 from miniproject.simulation import MiniprojectSimulation
 

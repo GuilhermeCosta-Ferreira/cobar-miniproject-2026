@@ -7,7 +7,7 @@ from pathlib import Path
 from joblib import load
 
 from miniproject.simulation import MiniprojectSimulation
-from .hybrid_controller import HybridTurningController
+from .gait import HybridTurningController
 
 from .wind import Wind
 from .olfaction import Olfaction
