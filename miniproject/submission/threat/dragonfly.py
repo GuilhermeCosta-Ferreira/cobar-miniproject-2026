@@ -62,6 +62,7 @@ class DragonflyAttackDetector:
         self.current_visible = False
         self.current_attack = False
         self.current_side_bias = 0.0
+        self.attack_has_triggered = False
 
     @classmethod
     def from_timestep(
@@ -109,8 +110,6 @@ class DragonflyAttackDetector:
             if side_bias != 0:
                 self.current_side_bias = side_bias
 
-        self.current_visible = visible_cue or current_step < self.visible_memory_until
-
         if attack_cue:
             self.consecutive_hits += 1
         else:
@@ -120,12 +119,21 @@ class DragonflyAttackDetector:
 
         if threshold_reached and self.hold_steps <= 0:
             self.current_attack = True
+            self.attack_has_triggered = True
+            self.current_visible = visible_cue or current_step < self.visible_memory_until
             return self.current_attack
 
         if threshold_reached:
             self.attack_memory_until = current_step + self.hold_steps
 
         self.current_attack = current_step < self.attack_memory_until
+        if self.current_attack:
+            self.attack_has_triggered = True
+
+        if self.attack_has_triggered and not self.current_attack and not visible_cue:
+            self.visible_memory_until = -1
+
+        self.current_visible = visible_cue or current_step < self.visible_memory_until
 
         return self.current_attack
 

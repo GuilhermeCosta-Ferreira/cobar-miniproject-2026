@@ -34,7 +34,7 @@ dependencies = [
     "ipython>=9.10,<10.0",
     "pandas>=3.0,<4.0",
     "matplotlib>=3.10,<4.0",
-    "matplotlib-tufte>=1.1.1,<2.0",
+    "matplotlib_tufte @ git+https://github.com/ninivert/matplotlib_tufte.git",
     "ipympl>=0.10.0",
     "joblib>=1.5.3",
     "scikit-learn>=1.8.0",
