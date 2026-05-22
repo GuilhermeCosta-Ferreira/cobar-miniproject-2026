@@ -1,6 +1,7 @@
 name: "stable_no_hybrid_10"
 controller:
   base_vf: 10
+  max_vf: 10
   max_vt: 7
   dropoff_vt: 3
 

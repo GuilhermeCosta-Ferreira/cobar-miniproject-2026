@@ -31,11 +31,10 @@ class Controller:
 
         self.base_vf = config["controller"]["base_vf"]
         self.max_vt = config["controller"]["max_vt"]
+        self.max_vf = config["controller"]["max_vf"]
         self.dropoff_vt = config["controller"]["dropoff_vt"]
 
         self.olfaction_gain = config["olfaction"]["gain"]
-
-
 
         hybrid_cfg = config["hybrid"]
         f_cfg = hybrid_cfg["f"]
@@ -108,16 +107,6 @@ class Controller:
         self.current_drive = [0.0, 0.0]
         self.inverse_model = load(MODEL_PATH)
 
-        signal_20 = self.inverse_model.predict(np.array([np.array([20,0])]))[0]
-        signal_15 = self.inverse_model.predict(np.array([np.array([15,0])]))[0]
-        signal_10 = self.inverse_model.predict(np.array([np.array([10,0])]))[0]
-
-        """
-        print(f"Signal for 20 forward: {signal_20}")
-        print(f"Signal for 15 forward: {signal_15}")
-        print(f"Signal for 10 forward: {signal_10}")
-        """
-
         self._velocity_history: list = []
         self._drive_history: list = []
 
@@ -172,7 +161,8 @@ class Controller:
         velocity = drifter(
             current_velocity = velocity,
             dropoff_vt = self.dropoff_vt,
-            max_vt = self.max_vt
+            max_vt = self.max_vt,
+            max_vf = self.max_vf
         )
         self._velocity_history.append(velocity)
 
@@ -231,11 +221,12 @@ def drifter(
     current_velocity: np.ndarray,
     dropoff_vt: float,
     max_vt: float,
+    max_vf: float
 ) -> np.ndarray:
     current_vf = current_velocity[0]
     current_vt = current_velocity[1]
 
-    current_vf = np.min([current_vf, 20])
+    current_vf = np.min([current_vf, max_vf])
 
     vt_abs = abs(current_vt)
 
