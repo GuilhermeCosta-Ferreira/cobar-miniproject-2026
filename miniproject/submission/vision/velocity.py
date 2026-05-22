@@ -13,8 +13,8 @@ def get_velocity_vector(
     current_forward_velocity: float,
     gain: float,
     slow_down_rate: float,
-    h_far = 0.0,
-    h_stop = 0.95, #0.45
+    h_far=0.0,
+    h_stop=0.95,  # 0.45
 ) -> np.ndarray:
     if len(centroids) == 0:
         return np.array([0.0, 0.0])
@@ -30,7 +30,7 @@ def get_velocity_vector(
     risk = np.clip((height_ratio - h_far) / (h_stop - h_far), 0.0, 1.0)
     risk = risk**2
 
-    vf = -(current_forward_velocity * slow_down_rate) * risk #0.0
+    vf = -(current_forward_velocity * slow_down_rate) * risk  # 0.0
 
     if abs(centrality) < 0.1 and risk > 0.5:
         vt = gain * risk * 1

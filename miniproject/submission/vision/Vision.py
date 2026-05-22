@@ -130,11 +130,11 @@ class Vision:
             self._picture_idx_history.append(step)
 
         vision_velocity = get_velocity_vector(
-            image = frame,
-            centroids = obstacle_centroids,
-            current_forward_velocity = current_forward_vel,
+            image=frame,
+            centroids=obstacle_centroids,
+            current_forward_velocity=current_forward_vel,
             slow_down_rate=self.slow_down_rate,
-            gain = self.gain,
+            gain=self.gain,
         )
 
         self.vision_smooth = get_smooth_vision(

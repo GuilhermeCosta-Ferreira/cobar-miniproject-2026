@@ -47,6 +47,7 @@ dependencies = [
     "optuna>=4.8.0",
     "matplotlib-tufte",
     "filterpy>=1.4.5",
+    "pylint>=4.0.5",
 ]
 
 [project.optional-dependencies]

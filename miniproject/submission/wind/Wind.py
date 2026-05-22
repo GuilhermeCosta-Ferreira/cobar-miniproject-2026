@@ -163,7 +163,7 @@ class Wind:
         )
         if max_qacc > self.qacc_threshold:
             adhesion = np.ones(6)
-        
+
     def _smooth_signals(
         self, signal: list[np.ndarray], win: int = 200
     ) -> list[np.ndarray]:
@@ -206,7 +206,9 @@ class Wind:
         adhesion = self._compute_adhesion(antenna_data)
 
         if np.abs(wind_angle) < np.radians(30) or np.abs(wind_angle) > np.radians(150):
-            control_signal = np.array([0, 0])  # No drive when wind is from the front or back
+            control_signal = np.array(
+                [0, 0]
+            )  # No drive when wind is from the front or back
 
         return control_signal, adhesion
 
@@ -242,7 +244,5 @@ class Wind:
             angle, antenna_data, scaler=scaler
         )
         self.current_signal = control_signal
-
-        
 
         return control_signal, adhesion

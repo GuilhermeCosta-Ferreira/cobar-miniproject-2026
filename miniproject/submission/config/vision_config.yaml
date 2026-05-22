@@ -11,7 +11,7 @@ olfaction:
 vision:
   min_height: 200
   scare_height: 405
-  gain: 2.75
+  gain: 2.5
   slow_down_rate: 0.2
   alpha: 0.5
   leaf_hue: 120
@@ -23,7 +23,7 @@ vision:
 
 wind: 
   fwd_k: 1
-  lat_k: 1
+  lat_k: 0.2
   fnulling_threshold: 30 #0.5235987756 # 30 degrees in radians
   qacc_threshold: 0.5
 

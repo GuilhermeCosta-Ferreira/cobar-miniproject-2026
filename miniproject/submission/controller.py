@@ -15,10 +15,14 @@ from .vision import Vision
 from .threat import DEFAULT_DRAGONFLY_STATE, DragonflyAttackDetector, EscapeController
 from .config import load_config
 
-MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
+MODEL_PATH = (
+    Path(__file__).resolve().parent
+    / "periphery"
+    / "models"
+    / "turning_inverse_model_flat.joblib"
+)
 CONFIG_PATH = Path(__file__).resolve().parent / "config" / "vision_config.yaml"
 CONFIG = load_config(CONFIG_PATH)
-
 
 
 # ================================================================
@@ -155,29 +159,7 @@ class Controller:
         # WIND
         wind = sim.get_antenna_data(sim.fly.name)
         wind_velocity, wind_adhesion = self.wind.process_wind(wind)
-<<<<<<< HEAD
-        self.add_adhesion(wind_adhesion)
-=======
-        if wind_adhesion is not None:
-            self.add_adhesion(wind_adhesion)
-
-        # VISION
-        vision_velocity = np.array([0.0, 0.0])
-        if sim.enable_grass:
-            vision_velocity = self.vision.obstacle_to_velocity(
-                sim=sim,
-                current_forward_vel=odor_velocity[0],
-            )
-
-        velocity = vision_velocity + wind_velocity + odor_velocity
-        velocity = drifter(
-            current_velocity=velocity, dropoff_vt=self.dropoff_vt, max_vt=self.max_vt
-        )
-        self._velocity_history.append(velocity)
-
-        drives = self.inverse_model.predict(np.array([velocity]))[0]
-        self._drive_history.append(drives)
->>>>>>> 16af6b467b75c9a85cbd7638840d9c5e92f740c8
+        # self.add_adhesion(wind_adhesion)
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
         dragonfly_state = DEFAULT_DRAGONFLY_STATE.copy()
@@ -239,12 +221,12 @@ class Controller:
                 max_turn=escape_config.panic_max_turn_velocity,
             )
         else:
-            velocity = odor_velocity + vision_velocity + wind_velocity
+            velocity = odor_velocity + vision_velocity  # + wind_velocity
             velocity = drifter(
-                current_velocity = velocity,
-                dropoff_vt = self.dropoff_vt,
-                max_vt = self.max_vt,
-                max_vf = self.max_vf
+                current_velocity=velocity,
+                dropoff_vt=self.dropoff_vt,
+                max_vt=self.max_vt,
+                max_vf=self.max_vf,
             )
 
         self.current_velocity = velocity
@@ -262,10 +244,7 @@ class Controller:
 # 1.1 Subsection: Helper Functions
 # ──────────────────────────────────────────────────────
 def drifter(
-    current_velocity: np.ndarray,
-    dropoff_vt: float,
-    max_vt: float,
-    max_vf: float
+    current_velocity: np.ndarray, dropoff_vt: float, max_vt: float, max_vf: float
 ) -> np.ndarray:
     current_vf = current_velocity[0]
     current_vt = current_velocity[1]
@@ -298,6 +277,8 @@ def adapt_drives(drives: np.ndarray, max_signal: float = 2) -> np.ndarray:
         return drives
 
     return drives / max_abs * max_signal
+
+
 def adapt_velocity(
     velocity: np.ndarray,
     max_forward: float = 15.0,

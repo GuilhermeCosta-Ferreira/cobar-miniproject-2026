@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from ..vision.detection import dragonfly_red_features_from_raw_vision
 
-
 DEFAULT_DRAGONFLY_STATE: dict[str, float | bool] = {
     "visible": False,
     "attack": False,
@@ -120,7 +119,9 @@ class DragonflyAttackDetector:
         if threshold_reached and self.hold_steps <= 0:
             self.current_attack = True
             self.attack_has_triggered = True
-            self.current_visible = visible_cue or current_step < self.visible_memory_until
+            self.current_visible = (
+                visible_cue or current_step < self.visible_memory_until
+            )
             return self.current_attack
 
         if threshold_reached:
