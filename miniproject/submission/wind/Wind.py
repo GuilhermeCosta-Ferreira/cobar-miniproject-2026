@@ -155,9 +155,14 @@ class Wind:
         self.current_estimated_wind_angle = estimated_angle
         return estimated_angle
 
-    def _compute_adhesion(self, wind_angle: float) -> np.ndarray:
+    def _compute_adhesion(self, antenna_data: float) -> np.ndarray:
         """Compute an adhesion signal based on the wind angle. For example, full adhesion when wind is from the sides."""
-        return np.array([1, 1, 1, 1, 1, 1])  # Full adhesion when wind is from the sides
+        max_qacc = max(
+            np.max(np.abs(antenna_data["l"]["qacc"])),
+            np.max(np.abs(antenna_data["r"]["qacc"])),
+        )
+        if max_qacc > self.qacc_threshold:
+            adhesion = np.ones(6)
         
     def _smooth_signals(
         self, signal: list[np.ndarray], win: int = 200
@@ -175,6 +180,7 @@ class Wind:
     def _generate_control_signal(
         self,
         wind_angle: float,
+        antenna_data: dict[str, dict[str, np.ndarray]],
         scaler: float = 1,
     ) -> np.ndarray:
         """Convert egocentric antenna deflections into a [left, right] motor drive signal.
@@ -197,7 +203,7 @@ class Wind:
         lateral_component = self.lat_k * np.sin(wind_angle)
         control_signal = np.array([forward_component, lateral_component]) * scaler
         self.add_signal(control_signal)
-        adhesion = self._compute_adhesion(wind_angle)
+        adhesion = self._compute_adhesion(antenna_data)
 
         if np.abs(wind_angle) < np.radians(30) or np.abs(wind_angle) > np.radians(150):
             control_signal = np.array([0, 0])  # No drive when wind is from the front or back
@@ -233,15 +239,10 @@ class Wind:
             scaler = 1
         self.add_angle(angle)
         control_signal, adhesion = self._generate_control_signal(
-            angle, scaler=scaler
+            angle, antenna_data, scaler=scaler
         )
         self.current_signal = control_signal
 
-        max_qacc = max(
-            np.max(np.abs(antenna_data["l"]["qacc"])),
-            np.max(np.abs(antenna_data["r"]["qacc"])),
-        )
-        if max_qacc > self.qacc_threshold:
-            adhesion = np.ones(6)
+        
 
         return control_signal, adhesion

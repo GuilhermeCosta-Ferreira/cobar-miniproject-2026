@@ -147,6 +147,10 @@ class Controller:
         merged with the CPG adhesion signal and then reset each step.
         Leg order: [lf, lm, lh, rf, rm, rh].
         """
+        if self._adhesion_buffer is None:
+            self._adhesion_buffer = mask
+        if mask is None:
+            return
         self._adhesion_buffer = np.maximum(self._adhesion_buffer, mask)
 
     def step(self, sim: MiniprojectSimulation):
@@ -160,28 +164,9 @@ class Controller:
         )
 
         # WIND
-
         wind = sim.get_antenna_data(sim.fly.name)
         wind_velocity, wind_adhesion = self.wind.process_wind(wind)
-        if wind_adhesion is not None:
-            self.add_adhesion(wind_adhesion)
-
-        # VISION
-        vision_velocity = np.array([0.0, 0.0])
-        if sim.enable_grass:
-            vision_velocity = self.vision.obstacle_to_velocity(
-                sim=sim,
-                current_forward_vel=odor_velocity[0],
-            )
-
-        velocity = vision_velocity + wind_velocity + odor_velocity 
-        velocity = drifter(
-            current_velocity=velocity, dropoff_vt=self.dropoff_vt, max_vt=self.max_vt
-        )
-        self._velocity_history.append(velocity)
-
-        drives = self.inverse_model.predict(np.array([velocity]))[0]
-        self._drive_history.append(drives)
+        self.add_adhesion(wind_adhesion)
 
         # VISION - dragonfly. This is perception-driven, not level-flag-driven.
         dragonfly_state = DEFAULT_DRAGONFLY_STATE.copy()
@@ -243,7 +228,7 @@ class Controller:
                 max_turn=escape_config.panic_max_turn_velocity,
             )
         else:
-            velocity = odor_velocity + vision_velocity# + wind_velocity
+            velocity = odor_velocity + vision_velocity + wind_velocity
             velocity = drifter(
                 current_velocity = velocity,
                 dropoff_vt = self.dropoff_vt,
@@ -259,8 +244,6 @@ class Controller:
         self._drive_history.append(drives)
 
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
-        adhesion = np.maximum(adhesion, self._adhesion_buffer)
-        self._adhesion_buffer[:] = 0
         return joint_angles, adhesion
 
 
