@@ -13,13 +13,12 @@ from .wind import Wind
 from .olfaction import Olfaction
 from .vision import Vision
 from .threat import DEFAULT_DRAGONFLY_STATE, DragonflyAttackDetector, EscapeController
+from .config import load_config
 
-MODEL_PATH = (
-    Path(__file__).resolve().parent
-    / "periphery"
-    / "models"
-    / "turning_inverse_model_flat.joblib"
-)
+MODEL_PATH = Path(__file__).resolve().parent / "periphery" / "models" / "turning_inverse_model_flat.joblib"
+CONFIG_PATH = Path(__file__).resolve().parent / "config" / "vision_config.yaml"
+CONFIG = load_config(CONFIG_PATH)
+
 
 
 # ================================================================
@@ -29,7 +28,7 @@ class Controller:
     def __init__(
         self,
         sim: MiniprojectSimulation,
-        config: dict,
+        config: dict = CONFIG,
     ):
         self.config = config
 
@@ -112,16 +111,6 @@ class Controller:
         self.obstacle_velocity = np.array([0.0, 0.0])
         self.inverse_model = load(MODEL_PATH)
 
-        signal_20 = self.inverse_model.predict(np.array([np.array([20, 0])]))[0]
-        signal_15 = self.inverse_model.predict(np.array([np.array([15, 0])]))[0]
-        signal_10 = self.inverse_model.predict(np.array([np.array([10, 0])]))[0]
-
-        """
-        print(f"Signal for 20 forward: {signal_20}")
-        print(f"Signal for 15 forward: {signal_15}")
-        print(f"Signal for 10 forward: {signal_10}")
-        """
-
         self._velocity_history: list = []
         self._drive_history: list = []
         self._adhesion_buffer = np.zeros(6)  # legs: [lf, lm, lh, rf, rm, rh]
@@ -174,7 +163,7 @@ class Controller:
                 current_forward_vel=odor_velocity[0],
             )
 
-        velocity = vision_velocity + wind_velocity + odor_velocity 
+        velocity = vision_velocity + wind_velocity + odor_velocity
         velocity = drifter(
             current_velocity=velocity, dropoff_vt=self.dropoff_vt, max_vt=self.max_vt
         )
