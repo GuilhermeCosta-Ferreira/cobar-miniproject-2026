@@ -111,16 +111,6 @@ class Controller:
         self.obstacle_velocity = np.array([0.0, 0.0])
         self.inverse_model = load(MODEL_PATH)
 
-        signal_20 = self.inverse_model.predict(np.array([np.array([20, 0])]))[0]
-        signal_15 = self.inverse_model.predict(np.array([np.array([15, 0])]))[0]
-        signal_10 = self.inverse_model.predict(np.array([np.array([10, 0])]))[0]
-
-        """
-        print(f"Signal for 20 forward: {signal_20}")
-        print(f"Signal for 15 forward: {signal_15}")
-        print(f"Signal for 10 forward: {signal_10}")
-        """
-
         self._velocity_history: list = []
         self._drive_history: list = []
         self._adhesion_buffer = np.zeros(6)  # legs: [lf, lm, lh, rf, rm, rh]
