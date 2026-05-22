@@ -173,15 +173,7 @@ class Controller:
 
         # VISION - obstacles. During dragonfly danger, obstacle vision is forced
         # on so a burst cannot ignore grass just because the normal gate is idle.
-        vision_velocity = np.array([0.0, 0.0])
-        should_check_obstacles = (
-            ((current_step > 5e3) or self.vision.is_active)
-            or escape_decision.mode in ("watch", "panic_escape")
-        )
-        if should_check_obstacles and sim.enable_grass:
-            vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
-        else:
-            self.vision.current_signal = vision_velocity
+        vision_velocity = self.vision.obstacle_to_velocity(sim, odor_velocity[0])
         self.obstacle_velocity = vision_velocity
 
         if escape_decision.mode == "watch":
@@ -216,7 +208,12 @@ class Controller:
             )
         else:
             velocity = odor_velocity + vision_velocity + wind_velocity
-            velocity = adapt_velocity(velocity, max_forward=15.0, max_turn=9.0)
+            velocity = drifter(
+                current_velocity = velocity,
+                dropoff_vt = self.dropoff_vt,
+                max_vt = self.max_vt,
+                max_vf = self.max_vf
+            )
 
         self.current_velocity = velocity
         self._velocity_history.append(velocity)
@@ -226,7 +223,6 @@ class Controller:
         self._drive_history.append(drives)
 
         joint_angles, adhesion = self.turning_controller.step(sim, drives)
-        #joint_angles, adhesion = self.turning_controller.step(drives)
         return joint_angles, adhesion
 
 
