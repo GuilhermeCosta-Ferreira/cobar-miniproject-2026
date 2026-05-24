@@ -48,6 +48,7 @@ dependencies = [
     "matplotlib-tufte",
     "filterpy>=1.4.5",
     "pylint>=4.0.5",
+    "scipy>=1.17.0",
 ]
 
 [project.optional-dependencies]
